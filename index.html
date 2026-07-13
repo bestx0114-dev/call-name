@@ -382,9 +382,37 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // =====================================================================
+        // 🛠️ 自行部署設定區塊 (當您要把網頁放到 GitHub 或自己的伺服器時，請填寫此處)
+        // =====================================================================
+        // 請至 Firebase Console 建立免費專案，並將您的金鑰資訊貼在此處：
+        const USER_FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBrv87al3jTECu-YAnUGtYfhFWvQTrXi9w",
+    authDomain: "smart-office-broadcast.firebaseapp.com",
+    databaseURL: "https://smart-office-broadcast-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "smart-office-broadcast",
+    storageBucket: "smart-office-broadcast.firebasestorage.app",
+    messagingSenderId: "529501822517",
+    appId: "1:529501822517:web:10c8e14f4d7c7e13209b7c",
+    measurementId: "G-TNXRF4Q689"
+  }; 
+        
+        /* 💡 範例格式：
+        const USER_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyA1b2C3d4E5f6G7h8I9j0...",
+            authDomain: "smart-office-broadcast.firebaseapp.com",
+            projectId: "smart-office-broadcast",
+            storageBucket: "smart-office-broadcast.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+        */
+        const USER_APP_ID = "smart-office-broadcast"; // 您自訂的應用程式識別 ID
+        // =====================================================================
+
         // 全域狀態定義
         window.appState = {
-            appId: typeof __app_id !== 'undefined' ? __app_id : 'smart-office-broadcast',
+            appId: typeof __app_id !== 'undefined' ? __app_id : (USER_APP_ID || 'smart-office-broadcast'),
             db: null,
             auth: null,
             userId: null,
@@ -433,11 +461,19 @@
             const badge = document.getElementById('client-id-badge');
 
             try {
-                if (typeof __firebase_config === 'undefined') {
+                let firebaseConfig;
+
+                // 優先使用使用者手動在程式中設定的資訊
+                if (USER_FIREBASE_CONFIG) {
+                    firebaseConfig = USER_FIREBASE_CONFIG;
+                    window.appState.appId = USER_APP_ID || 'smart-office-broadcast';
+                } else if (typeof __firebase_config !== 'undefined') {
+                    // 本地環境自動注入
+                    firebaseConfig = JSON.parse(__firebase_config);
+                } else {
                     throw new Error("無可用 Firebase 設定，改為單機模擬模式");
                 }
                 
-                const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 const db = getFirestore(app);
