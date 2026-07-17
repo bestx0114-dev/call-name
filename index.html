@@ -663,6 +663,27 @@
             }
         }
 
+        // 全域共用一個解鎖後的 AudioContext
+        let globalAudioCtx = null;
+
+        function initAudioContext() {
+            if (!globalAudioCtx) {
+                try {
+                    // 💡 關鍵：強制將瀏覽器的音訊通訊協定指定為 'playback'。
+                    // 這能確保即使 iPhone 側邊實體鍵開啟了「靜音模式」，網頁依然能突破限制將「叮咚～」聲音播到藍牙喇叭中！
+                    if (navigator.audioSession) {
+                        navigator.audioSession.type = 'playback';
+                    }
+                } catch (e) {
+                    console.log("不支援 audioSession 類別設定", e);
+                }
+                globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (globalAudioCtx.state === 'suspended') {
+                globalAudioCtx.resume();
+            }
+        }
+
         function closeDebugModal() {
             const modal = document.getElementById('debug-modal');
             if (modal) {
@@ -1157,6 +1178,22 @@
                 window.appState.isSpeakerActive = true;
                 window.appState.sessionStartTime = Date.now();
                 
+                // 1. 初始化並啟用 iOS 共用音訊解鎖，保障靜音鍵不會影響播放
+                initAudioContext();
+                
+                // 2. 💡 完美解鎖 iOS Safari Web Speech API 的關鍵步驟！
+                // 在直接受使用者「手動點擊 (User Gesture)」啟動的當下，立刻播放一個「空白、無聲音」的 dummy 語音。
+                // 這樣做能向 iOS WebKit 核心註冊並解鎖當前頁面的語音播放權限（Trusted Session）。
+                // 如此一來，之後由資料庫（Firestore）非同步推送進來的廣播訊號就能像 Android 一樣順暢自動朗讀！
+                try {
+                    const dummyUtterance = new SpeechSynthesisUtterance(" ");
+                    dummyUtterance.volume = 0;
+                    dummyUtterance.rate = 10;
+                    window.speechSynthesis.speak(dummyUtterance);
+                } catch (e) {
+                    console.log("iOS TTS 預先解鎖失敗", e);
+                }
+
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
                 btnText.innerText = "監聽音響運作中...";
@@ -1180,7 +1217,9 @@
         function playDingDong() {
             return new Promise((resolve) => {
                 try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    // 初始化或取得已存在的全域 AudioContext
+                    initAudioContext();
+                    const ctx = globalAudioCtx;
                     const now = ctx.currentTime;
                     
                     const osc1 = ctx.createOscillator();
@@ -1235,7 +1274,7 @@
                 playingText.innerText = `「${text}」`;
             }
 
-            // 1. 播放「叮咚」前奏音
+            // 1. 播放「叮咚」前奏音 (使用在 iOS click 事件中被安全解鎖過的全域 context)
             await playDingDong();
 
             // 2. 進行真人語音合成發聲
@@ -1250,6 +1289,12 @@
             const speechText = text.replace(/[~～]/g, '，');
             
             const utterance = new SpeechSynthesisUtterance(speechText);
+            
+            // 💡 針對 iOS 特殊設定：明確指定語系為繁體中文，防止系統以英文發音拼讀中文單字。
+            utterance.lang = 'zh-TW';
+            
+            // 🔒 關鍵修復：將 utterance 實體指定給一個全域變數，防止被 iOS Safari 的垃圾回收器(GC)提早清理，進而導致卡死或播報中断
+            window.activeUtterance = utterance;
             
             const rateInput = document.getElementById('setting-rate');
             const pitchInput = document.getElementById('setting-pitch');
@@ -1273,7 +1318,21 @@
                 }
             }
 
+            // 🚨 智慧防卡死守護機制 (watchdog)
+            // 由於 iOS WebKit 時常因為背景網路切換或音訊頻道衝突，偶發性地使 TTS 的 end/error 事件丟失，
+            // 這裡設置一個 15 秒安全計時器。若超時未播放完畢，強制釋放畫面，避免介面卡死，能自動接收並朗讀下一則廣播。
+            const safetyTimeout = setTimeout(() => {
+                if (visualizer && !visualizer.classList.contains('hidden')) {
+                    console.warn("偵測到語音合成發生超時，安全看門狗啟動，強行回復播放待命狀態");
+                    window.activeUtterance = null;
+                    visualizer.classList.add('hidden');
+                    activationZone.classList.remove('hidden');
+                }
+            }, 15000);
+
             utterance.onend = () => {
+                clearTimeout(safetyTimeout);
+                window.activeUtterance = null;
                 setTimeout(() => {
                     if (visualizer) {
                         visualizer.classList.add('hidden');
@@ -1284,10 +1343,14 @@
 
             utterance.onerror = (e) => {
                 console.error("語音播放發生錯誤:", e);
-                if (visualizer) {
-                    visualizer.classList.add('hidden');
-                    activationZone.classList.remove('hidden');
-                }
+                clearTimeout(safetyTimeout);
+                window.activeUtterance = null;
+                setTimeout(() => {
+                    if (visualizer) {
+                        visualizer.classList.add('hidden');
+                        activationZone.classList.remove('hidden');
+                    }
+                }, 1000);
             };
 
             window.speechSynthesis.speak(utterance);
