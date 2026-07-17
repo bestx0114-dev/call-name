@@ -254,16 +254,43 @@
                             <div class="wave-bar w-2 bg-indigo-500 rounded-full"></div>
                         </div>
                         <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 max-w-md mx-auto">
-                            <span class="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">正在播報...</span>
+                            <span id="speaker-state-sub" class="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">正在播報...</span>
                             <p id="currently-playing-text" class="text-lg font-bold text-slate-800">「叮咚～」</p>
                         </div>
                     </div>
 
-                    <div class="border-t border-slate-100 pt-6">
-                        <h3 class="text-sm font-semibold text-slate-600 text-left mb-4 flex items-center gap-1.5">
-                            <i class="fa-solid fa-sliders"></i> 播報音訊設定 (本機調整)
+                    <!-- 🎵 前奏音效與語音設定區 -->
+                    <div class="border-t border-slate-100 pt-6 text-left">
+                        <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
+                            <i class="fa-solid fa-music text-indigo-600"></i>
+                            <span>🎵 廣播前奏與結束音效設定</span>
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left text-sm">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div class="space-y-1.5">
+                                <label class="text-xs text-slate-500 font-semibold block">選擇前奏音效樣式：</label>
+                                <select id="setting-chime-style" onchange="changeChimeStyle()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium">
+                                    <option value="classic_4">🏢 百貨公司經典四音 (登~登~登~登~)</option>
+                                    <option value="standard">🔔 傳統簡約雙音 (叮咚~)</option>
+                                    <option value="westminster">⛪ 經典西敏寺鐘聲</option>
+                                    <option value="custom">📢 自訂上傳 MP3 / WAV 檔案</option>
+                                </select>
+                                <p class="text-[10px] text-slate-400 mt-1">※ 結束提示音將自動搭配相同的風格（如百貨公司風格會播放高至低的「登~登~登~登~」）</p>
+                            </div>
+                            
+                            <div id="custom-chime-zone" class="hidden space-y-1.5">
+                                <label class="text-xs text-slate-500 font-semibold block">上傳您的自訂音效 (自動永久儲存)：</label>
+                                <input type="file" id="file-custom-chime" accept="audio/*" onchange="uploadCustomChime(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                                <p id="custom-chime-status" class="text-[10px] text-slate-400">目前尚無上傳檔案，將自動播放經典四音。</p>
+                            </div>
+                        </div>
+
+                        <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
+                            <i class="fa-solid fa-sliders text-indigo-600"></i>
+                            <span>📻 播報語音設定 (本機調整)</span>
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
                                     <span class="text-slate-500">播音速度 (Rate): <span id="val-rate">1.0</span></span>
@@ -430,13 +457,14 @@
         <p>© 2026 SmartOffice Broadcast Inc. 全功能整合智慧廣播網頁版</p>
     </footer>
 
+    <!-- 核心 JS 邏輯模組 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =====================================================================
-        // 🛠️ 自行部署設定區塊 (已幫您填寫 screenshot image_39a6e7.png 中的專屬金鑰！)
+        // 🛠️ 自行部署設定區塊 (已幫您填寫專案金鑰)
         // =====================================================================
         const USER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyCDCIxvrTUesekzG44UcdN5f1rrxcHn4u8",
@@ -492,6 +520,16 @@
                 if (!window.appState.db) throw new Error("資料庫尚未連接，無法同步設定");
                 const configDocRef = doc(window.appState.db, 'artifacts', appId, 'public', 'data', 'config', 'settings');
                 return await setDoc(configDocRef, settings);
+            },
+            clearBroadcasts: async (appId) => {
+                if (!window.appState.db) throw new Error("資料庫尚未連接，無法清除紀錄");
+                const broadcastsColRef = collection(window.appState.db, 'artifacts', appId, 'public', 'data', 'broadcasts');
+                const querySnapshot = await getDocs(broadcastsColRef);
+                const promises = [];
+                querySnapshot.forEach((docSnapshot) => {
+                    promises.push(deleteDoc(docSnapshot.ref));
+                });
+                return await Promise.all(promises);
             }
         };
 
@@ -652,7 +690,108 @@
         });
     </script>
 
+    <!-- 輔助與音效 JS 邏輯模組 -->
     <script>
+        // =====================================================================
+        // 💾 IndexedDB 儲存與管理自訂音效 (MP3 / WAV)
+        // =====================================================================
+        let customChimeBuffer = null;
+        let indexedDBInstance = null;
+
+        const dbRequest = indexedDB.open("SmartOfficeAudioDB", 1);
+        dbRequest.onupgradeneeded = function(e) {
+            let activeDb = e.target.result;
+            if (!activeDb.objectStoreNames.contains("audioStore")) {
+                activeDb.createObjectStore("audioStore");
+            }
+        };
+        dbRequest.onsuccess = function(e) {
+            indexedDBInstance = e.target.result;
+            loadStoredCustomChime();
+        };
+        dbRequest.onerror = function() {
+            console.error("無法開啟本地音效資料庫(IndexedDB)");
+        };
+
+        // 從資料庫讀取已儲存的音效並解碼
+        function loadStoredCustomChime() {
+            if (!indexedDBInstance) return;
+            const tx = indexedDBInstance.transaction(["audioStore"], "readonly");
+            const store = tx.objectStore("audioStore");
+            const getReq = store.get("customChime");
+
+            getReq.onsuccess = function() {
+                if (getReq.result) {
+                    decodeAndPrepareAudio(getReq.result);
+                }
+            };
+        }
+
+        // 解碼音效 ArrayBuffer
+        function decodeAndPrepareAudio(arrayBuffer) {
+            initAudioContext();
+            const copy = arrayBuffer.slice(0); // 複製一份，因解碼會排乾記憶體
+            globalAudioCtx.decodeAudioData(copy, (decodedBuffer) => {
+                customChimeBuffer = decodedBuffer;
+                const statusEl = document.getElementById('custom-chime-status');
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> 音效讀取成功 (${decodedBuffer.duration.toFixed(1)} 秒)</span>`;
+                }
+                console.log("自訂前奏音效載入並解碼成功！");
+            }, (err) => {
+                console.error("音訊解碼失敗：", err);
+                showToast("音效解碼失敗，請確認上傳的是正確的音訊檔", "error");
+            });
+        }
+
+        // 使用者手動上傳自訂音效檔
+        function uploadCustomChime(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast("正在上傳並解碼音效...", "info");
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const arrayBuffer = e.target.result;
+
+                // 儲存至 IndexedDB
+                const tx = indexedDBInstance.transaction(["audioStore"], "readwrite");
+                const store = tx.objectStore("audioStore");
+                store.put(arrayBuffer, "customChime");
+
+                tx.oncomplete = function() {
+                    decodeAndPrepareAudio(arrayBuffer);
+                    showToast("前奏音效上傳成功並已本地儲存！", "success");
+                };
+                tx.onerror = function() {
+                    showToast("音效儲存至資料庫時失敗", "error");
+                };
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 切換音效樣式時更新 UI
+        function changeChimeStyle() {
+            const style = document.getElementById('setting-chime-style').value;
+            const customZone = document.getElementById('custom-chime-zone');
+            if (style === 'custom') {
+                customZone.classList.remove('hidden');
+            } else {
+                customZone.classList.add('hidden');
+            }
+            localStorage.setItem('preferred_chime_style', style);
+        }
+
+        // 頁面初始化時回復先前存的音效樣式選擇
+        window.addEventListener('load', () => {
+            const savedStyle = localStorage.getItem('preferred_chime_style') || 'classic_4';
+            const selectEl = document.getElementById('setting-chime-style');
+            if (selectEl) {
+                selectEl.value = savedStyle;
+                changeChimeStyle();
+            }
+        });
+
         // 除錯彈窗控制
         function showFirebaseDebugModal(msg) {
             const modal = document.getElementById('debug-modal');
@@ -669,8 +808,6 @@
         function initAudioContext() {
             if (!globalAudioCtx) {
                 try {
-                    // 💡 關鍵：強制將瀏覽器的音訊通訊協定指定為 'playback'。
-                    // 這能確保即使 iPhone 側邊實體鍵開啟了「靜音模式」，網頁依然能突破限制將「叮咚～」聲音播到藍牙喇叭中！
                     if (navigator.audioSession) {
                         navigator.audioSession.type = 'playback';
                     }
@@ -699,7 +836,6 @@
                 try {
                     window.appState.wakeLock = await navigator.wakeLock.request('screen');
                     console.log('🔒 Wake Lock 螢幕防休眠成功啟動！手機將不會自動關螢幕。');
-                    // 監聽釋放事件（例如使用者切換分頁等）
                     window.appState.wakeLock.addEventListener('release', () => {
                         console.log('🔒 Wake Lock 釋放，螢幕回復預設休眠機制。');
                     });
@@ -718,7 +854,6 @@
             }
         }
 
-        // 當使用者切換視窗回到本網頁時，重新補上 Wake Lock 鎖定
         document.addEventListener('visibilitychange', async () => {
             if (window.appState.wakeLock !== null && document.visibilityState === 'visible') {
                 await requestWakeLock();
@@ -732,13 +867,11 @@
             const blackout = document.getElementById('blackout-screen');
             if (show) {
                 blackout.classList.remove('hidden');
-                // 進入全螢幕防干擾
                 if (document.documentElement.requestFullscreen) {
                     document.documentElement.requestFullscreen().catch(() => {});
                 }
             } else {
                 blackout.classList.add('hidden');
-                // 退出全螢幕
                 if (document.exitFullscreen && document.fullscreenElement) {
                     document.exitFullscreen().catch(() => {});
                 }
@@ -772,7 +905,6 @@
                 return;
             }
 
-            // 支援 斷行、半形/全形逗號、頓號 作為分隔符號
             const names = rawText.split(/[\n,，、\s]+/).map(n => n.trim()).filter(n => n.length > 0);
             if (names.length === 0) {
                 showToast("未偵測到任何有效的姓名資訊", "warning");
@@ -842,20 +974,14 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 抓取第一個工作表 (Sheet)
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // 轉為巢狀陣列，安全提取第一列/第一個直欄的值
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                     
-                    // 提取每一列第一個欄位 (Column A) 
                     const names = json
                         .map(row => row[0])
                         .filter(cell => cell !== undefined && cell !== null)
                         .map(cell => String(cell).trim())
-                        // 過濾空白、過濾可能出現的欄位抬頭標籤
                         .filter(name => name.length > 0 && name !== '姓名' && name !== 'Name' && name !== 'name');
 
                     if (names.length === 0) {
@@ -875,7 +1001,7 @@
                     if (added.length > 0) {
                         saveConfig();
                         showToast(`成功由 Excel 匯入 ${added.length} 筆員工姓名！`, "success");
-                        event.target.value = ''; // 重置 file input
+                        event.target.value = '';
                         toggleBulkPanel('staff');
                     } else {
                         showToast("Excel 中的員工名冊皆已存在", "info");
@@ -898,12 +1024,10 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
                     
-                    // 提取 Column A
                     const locs = json
                         .map(row => row[0])
                         .filter(cell => cell !== undefined && cell !== null)
@@ -927,7 +1051,7 @@
                     if (added.length > 0) {
                         saveConfig();
                         showToast(`成功由 Excel 匯入 ${added.length} 筆處所地點！`, "success");
-                        event.target.value = ''; // 重置 file input
+                        event.target.value = '';
                         toggleBulkPanel('location');
                     } else {
                         showToast("Excel 中的處所皆已存在", "info");
@@ -1178,13 +1302,9 @@
                 window.appState.isSpeakerActive = true;
                 window.appState.sessionStartTime = Date.now();
                 
-                // 1. 初始化並啟用 iOS 共用音訊解鎖，保障靜音鍵不會影響播放
+                // 初始化並啟用 iOS 共用音訊解鎖，保障靜音鍵不會影響播放
                 initAudioContext();
                 
-                // 2. 💡 完美解鎖 iOS Safari Web Speech API 的關鍵步驟！
-                // 在直接受使用者「手動點擊 (User Gesture)」啟動的當下，立刻播放一個「空白、無聲音」的 dummy 語音。
-                // 這樣做能向 iOS WebKit 核心註冊並解鎖當前頁面的語音播放權限（Trusted Session）。
-                // 如此一來，之後由資料庫（Firestore）非同步推送進來的廣播訊號就能像 Android 一樣順暢自動朗讀！
                 try {
                     const dummyUtterance = new SpeechSynthesisUtterance(" ");
                     dummyUtterance.volume = 0;
@@ -1201,7 +1321,7 @@
                 showToast("喇叭播放模式已啟動！藍牙音響待命中", "success");
                 
                 requestWakeLock(); // 🔒 啟動螢幕防休眠
-                playDingDong();
+                playChimeSound();
             } else {
                 window.appState.isSpeakerActive = false;
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
@@ -1214,42 +1334,137 @@
             }
         }
 
-        function playDingDong() {
+        // =====================================================================
+        // 🎼 智慧前奏音效產生器 (Web Audio API) & 自訂音效播音核心
+        // =====================================================================
+        function playChimeSound() {
             return new Promise((resolve) => {
                 try {
-                    // 初始化或取得已存在的全域 AudioContext
                     initAudioContext();
                     const ctx = globalAudioCtx;
-                    const now = ctx.currentTime;
-                    
-                    const osc1 = ctx.createOscillator();
-                    const gain1 = ctx.createGain();
-                    osc1.type = 'sine';
-                    osc1.frequency.setValueAtTime(554.37, now); // C#5
-                    gain1.gain.setValueAtTime(0.25, now);
-                    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-                    osc1.connect(gain1);
-                    gain1.connect(ctx.destination);
-                    osc1.start(now);
-                    osc1.stop(now + 0.8);
-                    
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(440.00, now + 0.25); // A4
-                    gain2.gain.setValueAtTime(0.25, now + 0.25);
-                    gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.start(now + 0.25);
-                    osc2.stop(now + 1.2);
+                    const style = document.getElementById('setting-chime-style').value;
 
-                    setTimeout(resolve, 1100);
+                    // 1. 若選擇自訂上傳且有成功載入的 buffer，直接播放自訂 MP3
+                    if (style === 'custom' && customChimeBuffer) {
+                        const source = ctx.createBufferSource();
+                        source.buffer = customChimeBuffer;
+                        source.connect(ctx.destination);
+                        source.start(0);
+                        source.onended = () => resolve();
+                        return;
+                    }
+
+                    // 2. 否則，使用 Web Audio 聲學物理建模即時拉出音色
+                    const now = ctx.currentTime;
+
+                    if (style === 'standard') {
+                        // 🔔 傳統叮咚 (雙音)
+                        playSingleSynthNote(554.37, now, 0.8);       // C#5
+                        playSingleSynthNote(440.00, now + 0.25, 1.2); // A4
+                        setTimeout(resolve, 1400);
+
+                    } else if (style === 'westminster') {
+                        // ⛪ 西敏寺經典鐘聲 (4音縮減版)
+                        playSingleSynthNote(329.63, now, 0.9);        // E4
+                        playSingleSynthNote(261.63, now + 0.4, 0.9);  // C4
+                        playSingleSynthNote(293.66, now + 0.8, 0.9);  // D4
+                        playSingleSynthNote(196.00, now + 1.2, 1.4);  // G3
+                        setTimeout(resolve, 2600);
+
+                    } else {
+                        // 🏢 百貨公司經典 4 音 - 上行 (登~登~登~登~)
+                        playSingleSynthNote(349.23, now, 1.2);        // F4
+                        playSingleSynthNote(440.00, now + 0.3, 1.2);  // A4
+                        playSingleSynthNote(523.25, now + 0.6, 1.2);  // C5
+                        playSingleSynthNote(698.46, now + 0.9, 1.6);  // F5
+                        setTimeout(resolve, 2400);
+                    }
+
                 } catch (e) {
-                    console.warn("音訊上下文啟動錯誤", e);
+                    console.warn("前奏播放發生問題", e);
                     resolve();
                 }
             });
+        }
+
+        // =====================================================================
+        // 🎼 智慧結束音效產生器 - 下行 (登~登~登~登~ 由高往低)
+        // =====================================================================
+        function playEndingChimeSound() {
+            return new Promise((resolve) => {
+                try {
+                    initAudioContext();
+                    const ctx = globalAudioCtx;
+                    const style = document.getElementById('setting-chime-style').value;
+
+                    // 若為自訂音效，廣播結束時我們依然播放對應的下行音效作為標準收尾，維持公司廣播的專業秩序
+                    const now = ctx.currentTime;
+
+                    if (style === 'standard') {
+                        // 🔔 反向叮咚 (先低後高：咚~叮~)
+                        playSingleSynthNote(440.00, now, 0.8);       // A4
+                        playSingleSynthNote(554.37, now + 0.25, 1.2); // C#5
+                        setTimeout(resolve, 1400);
+
+                    } else if (style === 'westminster') {
+                        // ⛪ 西敏寺鐘聲反向 (G3 -> D4 -> C4 -> E4)
+                        playSingleSynthNote(196.00, now, 0.9);
+                        playSingleSynthNote(293.66, now + 0.4, 0.9);
+                        playSingleSynthNote(261.63, now + 0.8, 0.9);
+                        playSingleSynthNote(329.63, now + 1.2, 1.4);
+                        setTimeout(resolve, 2600);
+
+                    } else {
+                        // 🏢 百貨公司經典 4 音 - 下行 (登~登~登~登~ 由高往低)
+                        playSingleSynthNote(698.46, now, 1.2);        // F5 (高)
+                        playSingleSynthNote(523.25, now + 0.3, 1.2);  // C5
+                        playSingleSynthNote(440.00, now + 0.6, 1.2);  // A4
+                        playSingleSynthNote(349.23, now + 0.9, 1.6);  // F4 (低)
+                        setTimeout(resolve, 2400);
+                    }
+
+                } catch (e) {
+                    console.warn("結束提示音播放發生問題", e);
+                    resolve();
+                }
+            });
+        }
+
+        // 產生一個帶有溫暖諧波(Harmonics)與自然衰減(Envelope)的合成鐘聲單音
+        function playSingleSynthNote(frequency, startTime, duration) {
+            const ctx = globalAudioCtx;
+            
+            // 主波 (基音)
+            const oscElement = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+            oscElement.type = 'sine';
+            oscElement.frequency.setValueAtTime(frequency, startTime);
+            
+            // 諧波 (副音)
+            const subOsc = ctx.createOscillator();
+            const subGain = ctx.createGain();
+            subOsc.type = 'sine';
+            subOsc.frequency.setValueAtTime(frequency * 2, startTime); // 兩倍頻率
+
+            // 衰減控制
+            gainNode.gain.setValueAtTime(0.18, startTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+            subGain.gain.setValueAtTime(0.06, startTime);
+            subGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.5); // 諧波衰減較快
+
+            // 連結線路
+            oscElement.connect(gainNode);
+            subOsc.connect(subGain);
+            
+            gainNode.connect(ctx.destination);
+            subGain.connect(ctx.destination);
+
+            oscElement.start(startTime);
+            oscElement.stop(startTime + duration);
+
+            subOsc.start(startTime);
+            subOsc.stop(startTime + duration);
         }
 
         function processIncomingBroadcasts(broadcasts) {
@@ -1267,15 +1482,17 @@
             const activationZone = document.getElementById('speaker-activation-zone');
             const visualizer = document.getElementById('playing-visualizer');
             const playingText = document.getElementById('currently-playing-text');
+            const speakerStateSub = document.getElementById('speaker-state-sub');
             
             if (visualizer) {
                 activationZone.classList.add('hidden');
                 visualizer.classList.remove('hidden');
                 playingText.innerText = `「${text}」`;
+                if (speakerStateSub) speakerStateSub.innerText = "正在播報...";
             }
 
-            // 1. 播放「叮咚」前奏音 (使用在 iOS click 事件中被安全解鎖過的全域 context)
-            await playDingDong();
+            // 1. 播放「前奏音效」 (支援經典四音、西敏寺鐘聲或上傳的 MP3)
+            await playChimeSound();
 
             // 2. 進行真人語音合成發聲
             if (typeof window.speechSynthesis === 'undefined') {
@@ -1285,15 +1502,11 @@
 
             window.speechSynthesis.cancel(); 
             
-            // 💡 關鍵語音優化：將「~」與「～」自動轉換成中文逗號，語音引擎會完美過濾「波浪號」讀音，並觸發自然停頓！
+            // 將「~」與「～」自動轉換成中文逗號，語音引擎會完美過濾「波浪號」讀音，並觸發自然停頓！
             const speechText = text.replace(/[~～]/g, '，');
-            
             const utterance = new SpeechSynthesisUtterance(speechText);
             
-            // 💡 針對 iOS 特殊設定：明確指定語系為繁體中文，防止系統以英文發音拼讀中文單字。
             utterance.lang = 'zh-TW';
-            
-            // 🔒 關鍵修復：將 utterance 實體指定給一個全域變數，防止被 iOS Safari 的垃圾回收器(GC)提早清理，進而導致卡死或播報中断
             window.activeUtterance = utterance;
             
             const rateInput = document.getElementById('setting-rate');
@@ -1305,12 +1518,10 @@
             
             const voices = window.speechSynthesis.getVoices();
 
-            // 決定使用的語音引擎
             if (voiceSelect && voiceSelect.value) {
                 const selectedVoice = voices.find(v => v.voiceURI === voiceSelect.value);
                 if (selectedVoice) utterance.voice = selectedVoice;
             } else {
-                // 如果沒有手動指定，使用智慧引擎挑選最好聽的語音
                 const bestVoice = getOptimalChineseVoice(voices);
                 if (bestVoice) {
                     utterance.voice = bestVoice;
@@ -1319,8 +1530,6 @@
             }
 
             // 🚨 智慧防卡死守護機制 (watchdog)
-            // 由於 iOS WebKit 時常因為背景網路切換或音訊頻道衝突，偶發性地使 TTS 的 end/error 事件丟失，
-            // 這裡設置一個 15 秒安全計時器。若超時未播放完畢，強制釋放畫面，避免介面卡死，能自動接收並朗讀下一則廣播。
             const safetyTimeout = setTimeout(() => {
                 if (visualizer && !visualizer.classList.contains('hidden')) {
                     console.warn("偵測到語音合成發生超時，安全看門狗啟動，強行回復播放待命狀態");
@@ -1328,17 +1537,28 @@
                     visualizer.classList.add('hidden');
                     activationZone.classList.remove('hidden');
                 }
-            }, 15000);
+            }, 25000);
 
+            // 播報完畢後的生命週期 (包含 2 秒後的下行結束音播放)
             utterance.onend = () => {
                 clearTimeout(safetyTimeout);
                 window.activeUtterance = null;
-                setTimeout(() => {
-                    if (visualizer) {
-                        visualizer.classList.add('hidden');
-                        activationZone.classList.remove('hidden');
-                    }
-                }, 1000);
+
+                if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
+
+                // 📢 廣播結束後兩秒播放結束提示音 (登~登~登~登~ 由高往低)
+                setTimeout(async () => {
+                    if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
+                    await playEndingChimeSound();
+
+                    // 結束提示音播完後，緩衝 0.5 秒關閉視覺化，回到待命狀態
+                    setTimeout(() => {
+                        if (visualizer) {
+                            visualizer.classList.add('hidden');
+                            activationZone.classList.remove('hidden');
+                        }
+                    }, 500);
+                }, 200);
             };
 
             utterance.onerror = (e) => {
@@ -1356,18 +1576,14 @@
             window.speechSynthesis.speak(utterance);
         }
 
-        // 智慧選取最好聽的中文語音
         function getOptimalChineseVoice(voices) {
             const priorityPatterns = [
-                // 1. 微軟類神經網路自然語音 (Edge 專屬地表最強中文聲)
                 /Microsoft.*Natural.*Chinese/i,
                 /Microsoft.*Online.*Taiwan/i,
                 /Microsoft.*HsiaoChen/i,
                 /Microsoft.*Yunxi/i,
-                // 2. 蘋果高品質 Siri 語音 (macOS/iOS 優選)
                 /Mei-Ja/i,
                 /Siri/i,
-                // 3. Google 高階語音 (Chrome 專屬)
                 /Google.*國語.*臺灣/i,
                 /Google.*Mandarin/i,
                 /zh-TW/i,
@@ -1397,7 +1613,6 @@
             speakText("叮咚測試！系統運作正常，喇叭連線優良。");
         }
 
-        // 載入並分門別類所有可用語音引擎（將高品質標記出來）
         function populateVoiceList() {
             if (typeof speechSynthesis === 'undefined') return;
             
@@ -1413,7 +1628,6 @@
             const selectedURI = voiceSelect.value;
             voiceSelect.innerHTML = '';
             
-            // 篩選中文語音
             const chineseVoices = voices.filter(voice => 
                 voice.lang.includes('zh') || voice.lang.includes('zho') || voice.lang.includes('cmn')
             );
@@ -1435,7 +1649,6 @@
                 }
             });
 
-            // 渲染高品質語音區
             if (highQualityVoices.length > 0) {
                 const optGroupHigh = document.createElement('optgroup');
                 optGroupHigh.label = "✨ 推薦：AI 類神經真人音質 (聽起來像真人)";
@@ -1450,7 +1663,6 @@
                 voiceSelect.appendChild(optGroupHigh);
             }
 
-            // 渲染一般語音區
             if (standardVoices.length > 0) {
                 const optGroupStandard = document.createElement('optgroup');
                 optGroupStandard.label = "🤖 一般：傳統合成音質 (聽起來較像機器)";
@@ -1465,7 +1677,6 @@
                 voiceSelect.appendChild(optGroupStandard);
             }
 
-            // 如果先前沒選過，預設選擇最優的那個
             if (!selectedURI || selectedURI === "") {
                 const optimal = getOptimalChineseVoice(voices);
                 if (optimal) {
@@ -1474,7 +1685,6 @@
             }
         }
 
-        // 更新本機控制滑桿數值顯示
         function updateAudioSettingsDisplay() {
             document.getElementById('val-rate').innerText = document.getElementById('setting-rate').value;
             document.getElementById('val-pitch').innerText = document.getElementById('setting-pitch').value;
@@ -1486,7 +1696,6 @@
             renderTemplateSettingList();
         }
 
-        // 泛用渲染清單含刪除按鈕
         function renderSettingList(elementId, dataset, deleteCallback) {
             const list = document.getElementById(elementId);
             if (!list) return;
@@ -1505,7 +1714,6 @@
             });
         }
 
-        // 渲染範本特殊語句清單
         function renderTemplateSettingList() {
             const list = document.getElementById('settings-template-list');
             if (!list) return;
@@ -1524,7 +1732,6 @@
             });
         }
 
-        // 寫入更動回雲端或本機儲存
         async function saveConfig() {
             const db = window.appState.db;
             const { appId, staff, locations, templates } = window.appState;
@@ -1543,7 +1750,6 @@
             }
         }
 
-        // 新增/刪除 員工
         function addNewStaff() {
             const input = document.getElementById('new-staff-name');
             const name = input.value.trim();
@@ -1565,7 +1771,6 @@
             showToast(`已刪除員工：${name}`, "info");
         }
 
-        // 新增/刪除 處所
         function addNewLocation() {
             const input = document.getElementById('new-location-name');
             const loc = input.value.trim();
@@ -1587,7 +1792,6 @@
             showToast(`已刪除處所：${loc}`, "info");
         }
 
-        // 新增/刪除 範本
         function addNewTemplate() {
             const input = document.getElementById('new-template-text');
             const tpl = input.value.trim();
@@ -1608,15 +1812,23 @@
             showToast("語句範本已刪除", "info");
         }
 
-        // 清除發送紀錄
+        // 徹底修正：今日發送紀錄清除功能 (在雲端模式下能一鍵刪除雲端資料)
         async function clearHistory() {
             const db = window.appState.db;
-            if (db) {
-                showToast("雲端歷史紀錄已在本地重設", "info");
+            if (db && window.dbOps) {
+                try {
+                    showToast("正在清空雲端發送歷史紀錄...", "info");
+                    const { appId } = window.appState;
+                    await window.dbOps.clearBroadcasts(appId);
+                    showToast("已成功清空所有人的雲端歷史紀錄！", "success");
+                } catch (e) {
+                    console.error("清除雲端發送紀錄失敗:", e);
+                    showToast("清除紀錄失敗，請檢查網路連線", "error");
+                }
             } else {
                 localStorage.removeItem('mock_history');
                 renderHistory([]);
-                showToast("本地發送紀錄已清除", "success");
+                showToast("本地模擬發送紀錄已清除", "success");
             }
         }
 
@@ -1638,7 +1850,6 @@
             });
         }
 
-        // 自定義精美 Toast 通知系統
         function showToast(message, type = "info") {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
