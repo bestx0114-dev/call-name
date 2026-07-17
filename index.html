@@ -29,6 +29,15 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
+    <!-- 模擬關螢幕 (待命省電防燒屏) 的全螢幕黑色遮罩 -->
+    <div id="blackout-screen" onclick="toggleBlackout(false)" class="fixed inset-0 bg-black z-[100] hidden flex flex-col items-center justify-center text-slate-700 select-none cursor-pointer">
+        <div class="text-center space-y-4 animate-pulse">
+            <i class="fa-solid fa-moon text-6xl text-slate-800"></i>
+            <p class="text-sm font-semibold text-slate-800">SmartOffice 智慧廣播待命中...</p>
+            <p class="text-xs text-slate-900">輕觸螢幕任何地方即可恢復畫面</p>
+        </div>
+    </div>
+
     <!-- 雲端診斷除錯提示彈窗 -->
     <div id="debug-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-100 space-y-4">
@@ -227,6 +236,14 @@
                         </button>
                     </div>
 
+                    <!-- 模擬關閉螢幕待機按鈕 (僅在監聽啟用時顯示) -->
+                    <div id="blackout-btn-zone" class="hidden">
+                        <button onclick="toggleBlackout(true)" class="mx-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition active:scale-95 flex items-center gap-2 shadow shadow-slate-900/20">
+                            <i class="fa-solid fa-moon text-yellow-400"></i>
+                            <span>進入模擬關閉螢幕 (省電/防燒屏待命)</span>
+                        </button>
+                    </div>
+
                     <!-- 播報動態視覺化區塊 -->
                     <div id="playing-visualizer" class="hidden py-6 space-y-4">
                         <div class="flex items-end justify-center space-x-1.5 h-16">
@@ -419,7 +436,7 @@
         import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =====================================================================
-        // 🛠️ 自行部署設定區塊 (已幫您填寫專屬金鑰！)
+        // 🛠️ 自行部署設定區塊 (已幫您填寫 screenshot image_39a6e7.png 中的專屬金鑰！)
         // =====================================================================
         const USER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyCDCIxvrTUesekzG44UcdN5f1rrxcHn4u8",
@@ -442,7 +459,7 @@
             isSpeakerActive: false,
             sessionStartTime: Date.now(),
             processedBroadcasts: new Set(),
-            
+            wakeLock: null,            
             // 系統預設名單 (若雲端無設定時初始化)
             defaultStaff: ['王大同', '陳小華', '張志明', '李美玲', '林淑芬', '黃俊傑', '劉德華'],
             defaultLocations: ['總經理室', '會議室A', '1F大廳櫃台', '2F研發部', 'B1倉庫', '會客室'],
@@ -650,6 +667,60 @@
             const modal = document.getElementById('debug-modal');
             if (modal) {
                 modal.classList.add('hidden');
+            }
+        }
+
+        // =====================================================================
+        // 🔒 Wake Lock 螢幕防休眠防斷線技術
+        // =====================================================================
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    window.appState.wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('🔒 Wake Lock 螢幕防休眠成功啟動！手機將不會自動關螢幕。');
+                    // 監聽釋放事件（例如使用者切換分頁等）
+                    window.appState.wakeLock.addEventListener('release', () => {
+                        console.log('🔒 Wake Lock 釋放，螢幕回復預設休眠機制。');
+                    });
+                } catch (err) {
+                    console.warn(`🔒 Wake Lock 啟動失敗: ${err.name}, ${err.message}`);
+                }
+            } else {
+                console.warn('🔒 您的瀏覽器不支援 Wake Lock 螢幕防休眠技術。');
+            }
+        }
+
+        function releaseWakeLock() {
+            if (window.appState.wakeLock !== null) {
+                window.appState.wakeLock.release();
+                window.appState.wakeLock = null;
+            }
+        }
+
+        // 當使用者切換視窗回到本網頁時，重新補上 Wake Lock 鎖定
+        document.addEventListener('visibilitychange', async () => {
+            if (window.appState.wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        // =====================================================================
+        // 🌑 模擬關螢幕省電防燒屏模式
+        // =====================================================================
+        function toggleBlackout(show) {
+            const blackout = document.getElementById('blackout-screen');
+            if (show) {
+                blackout.classList.remove('hidden');
+                // 進入全螢幕防干擾
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(() => {});
+                }
+            } else {
+                blackout.classList.add('hidden');
+                // 退出全螢幕
+                if (document.exitFullscreen && document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                }
             }
         }
 
@@ -1080,6 +1151,7 @@
             const btn = document.getElementById('btn-activate-speaker');
             const icon = document.getElementById('speaker-icon');
             const btnText = document.getElementById('speaker-btn-text');
+            const blackoutBtnZone = document.getElementById('blackout-btn-zone');
             
             if (!window.appState.isSpeakerActive) {
                 window.appState.isSpeakerActive = true;
@@ -1088,15 +1160,20 @@
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
                 btnText.innerText = "監聽音響運作中...";
+                if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); // 顯示「模擬關螢幕」按鈕
                 showToast("喇叭播放模式已啟動！藍牙音響待命中", "success");
                 
+                requestWakeLock(); // 🔒 啟動螢幕防休眠
                 playDingDong();
             } else {
                 window.appState.isSpeakerActive = false;
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-power-off text-5xl";
                 btnText.innerText = "啟動監聽播放";
+                if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); // 隱藏「模擬關螢幕」按鈕
                 showToast("監聽播放已關閉", "info");
+                
+                releaseWakeLock(); // 🔒 解除螢幕鎖定
             }
         }
 
