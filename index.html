@@ -29,6 +29,42 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
+    <!-- 雲端診斷除錯提示彈窗 -->
+    <div id="debug-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-100 space-y-4">
+            <div class="flex items-center space-x-3 text-red-600">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h3 class="text-lg font-bold">雲端連線失敗診斷提示</h3>
+            </div>
+            <p class="text-xs text-slate-500">系統嘗試連線至您的 Firebase 雲端伺服器，但被伺服器拒絕了。請見下方偵測到的具體錯誤：</p>
+            <div class="bg-red-50 text-red-800 text-xs p-3 rounded-xl font-mono border border-red-100 whitespace-pre-wrap leading-relaxed" id="debug-error-msg">
+                偵測中...
+            </div>
+            <div class="text-xs text-slate-600 space-y-2">
+                <p class="font-bold text-slate-800">💡 排除此問題的 3 個黃金檢查步驟：</p>
+                <ol class="list-decimal pl-4 space-y-1.5 text-slate-600">
+                    <li>
+                        <span class="font-semibold text-indigo-600">啟用「匿名登入」驗證：</span> 
+                        到 Firebase 控制台 -> 左側選單 <b>Authentication</b> -> 點擊 <b>Sign-in method</b> 頁籤 -> 點選新增提供者 -> 選擇 <b>Anonymous (匿名)</b> 並啟用儲存。
+                    </li>
+                    <li>
+                        <span class="font-semibold text-indigo-600">建立「Firestore 資料庫」並開放規則：</span> 
+                        到左側選單 <b>Firestore Database</b> -> 點擊「建立資料庫」 -> 選擇<b>測試模式啟動 (允許讀寫)</b>。
+                    </li>
+                    <li>
+                        <span class="font-semibold text-indigo-600">關閉 AdBlock 或 Brave 阻擋：</span> 
+                        某些廣告/隱私阻擋器會阻擋 Firebase 的驗證網域，請暫時將其針對您的 GitHub Pages 關閉。
+                    </li>
+                </ol>
+            </div>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeDebugModal()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-semibold transition">
+                    我知道了，先使用單機模式體驗
+                </button>
+            </div>
+        </div>
+    </div>
+
     <header class="bg-gradient-to-r from-indigo-700 to-blue-600 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
             <div class="flex items-center space-x-3">
@@ -383,36 +419,23 @@
         import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =====================================================================
-        // 🛠️ 自行部署設定區塊 (當您要把網頁放到 GitHub 或自己的伺服器時，請填寫此處)
+        // 🛠️ 自行部署設定區塊 (已幫您填寫 screenshot image_39a6e7.png 中的專屬金鑰！)
         // =====================================================================
-        // 請至 Firebase Console 建立免費專案，並將您的金鑰資訊貼在此處：
         const USER_FIREBASE_CONFIG = {
-    apiKey: "AIzaSyBrv87al3jTECu-YAnUGtYfhFWvQTrXi9w",
-    authDomain: "smart-office-broadcast.firebaseapp.com",
-    databaseURL: "https://smart-office-broadcast-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "smart-office-broadcast",
-    storageBucket: "smart-office-broadcast.firebasestorage.app",
-    messagingSenderId: "529501822517",
-    appId: "1:529501822517:web:10c8e14f4d7c7e13209b7c",
-    measurementId: "G-TNXRF4Q689"
-  }; 
+            apiKey: "AIzaSyCDCIxvrTUesekzG44UcdN5f1rrxcHn4u8",
+  authDomain: "smart-office-broadcast2.firebaseapp.com",
+  projectId: "smart-office-broadcast2",
+  storageBucket: "smart-office-broadcast2.firebasestorage.app",
+  messagingSenderId: "620583773496",
+  appId: "1:620583773496:web:df81fbdcd4853071070dcd"
+};
         
-        /* 💡 範例格式：
-        const USER_FIREBASE_CONFIG = {
-            apiKey: "AIzaSyA1b2C3d4E5f6G7h8I9j0...",
-            authDomain: "smart-office-broadcast.firebaseapp.com",
-            projectId: "smart-office-broadcast",
-            storageBucket: "smart-office-broadcast.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890"
-        };
-        */
-        const USER_APP_ID = "smart-office-broadcast"; // 您自訂的應用程式識別 ID
+        const USER_APP_ID = "smart-office-broadcast2"; // 您的專案 ID
         // =====================================================================
 
         // 全域狀態定義
         window.appState = {
-            appId: typeof __app_id !== 'undefined' ? __app_id : (USER_APP_ID || 'smart-office-broadcast'),
+            appId: typeof __app_id !== 'undefined' ? __app_id : (USER_APP_ID || 'smart-office-broadcast2'),
             db: null,
             auth: null,
             userId: null,
@@ -466,7 +489,7 @@
                 // 優先使用使用者手動在程式中設定的資訊
                 if (USER_FIREBASE_CONFIG) {
                     firebaseConfig = USER_FIREBASE_CONFIG;
-                    window.appState.appId = USER_APP_ID || 'smart-office-broadcast';
+                    window.appState.appId = USER_APP_ID || 'smart-office-broadcast2';
                 } else if (typeof __firebase_config !== 'undefined') {
                     // 本地環境自動注入
                     firebaseConfig = JSON.parse(__firebase_config);
@@ -481,12 +504,23 @@
                 window.appState.db = db;
                 window.appState.auth = auth;
 
-                // 優先使用自訂 Token 驗證，否則使用匿名驗證
+                // 嘗試登入並補捉具體錯誤
                 let userCredential;
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    userCredential = await signInAnonymously(auth);
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        userCredential = await signInAnonymously(auth);
+                    }
+                } catch (authError) {
+                    console.error("Firebase Authentication 失敗:", authError);
+                    if (authError.code === 'auth/operation-not-allowed') {
+                        throw new Error("【未啟用驗證：auth/operation-not-allowed】\n請到 Firebase 控制台的左側選單，選擇 Authentication -> 點擊 Sign-in method 頁籤 -> 啟用「匿名 (Anonymous)」登入！這一步驟非常重要，一定要手動開啟！");
+                    } else if (authError.code === 'auth/network-request-failed') {
+                        throw new Error("【網路連線受阻】\n連線至 Firebase Auth 失敗。這通常是因為瀏覽器（如 Brave 或 Chrome 的 AdBlock 廣告阻擋插件）阻擋了驗證網址。請暫時將此網域加入白名單後重試。");
+                    } else {
+                        throw new Error(`【登入失敗：${authError.code}】\n${authError.message}`);
+                    }
                 }
 
                 window.appState.userId = userCredential.user.uid;
@@ -503,6 +537,9 @@
                 console.warn("Firebase 初始化失敗:", error);
                 statusDot.className = "h-2 w-2 rounded-full bg-red-500";
                 statusText.innerText = "單機演示模式";
+                
+                // 跳出精美的除錯提示引導
+                showFirebaseDebugModal(error.message);
                 
                 // 本地模擬名單載入
                 loadMockData();
@@ -529,7 +566,10 @@
                         locations: window.appState.defaultLocations,
                         templates: window.appState.defaultTemplates
                     };
-                    setDoc(configDocRef, initialConfig).catch(err => console.error("初始化設定寫入失敗", err));
+                    setDoc(configDocRef, initialConfig).catch(err => {
+                        console.error("資料庫寫入失敗:", err);
+                        showFirebaseDebugModal("【資料庫寫入權限拒絕：permission-denied】\n請確認您的 Firestore Database 規則 (Rules) 是否允許公用讀寫。請至 Firestore Database -> 選擇 規則 (Rules) 頁籤，將其設為測試模式（即 rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if true; } } }）");
+                    });
                     
                     window.appState.staff = initialConfig.staff;
                     window.appState.locations = initialConfig.locations;
@@ -541,6 +581,7 @@
             }, (error) => {
                 console.error("設定資料流監聽失敗:", error);
                 showToast("同步名單設定失敗，已切換至本機快取", "error");
+                showFirebaseDebugModal("【資料庫讀取權限拒絕】\n您的 Firestore 資料庫規則不允許讀取，或是您尚未在控制台點擊「建立資料庫 (Create database)」。\n\n系統將自動切換為單機儲存模式運行。");
                 loadMockData();
             });
 
@@ -595,6 +636,23 @@
     </script>
 
     <script>
+        // 除錯彈窗控制
+        function showFirebaseDebugModal(msg) {
+            const modal = document.getElementById('debug-modal');
+            const msgEl = document.getElementById('debug-error-msg');
+            if (modal && msgEl) {
+                msgEl.innerText = msg;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeDebugModal() {
+            const modal = document.getElementById('debug-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
         // 渲染主控台所有變動元件
         function renderUIPanels() {
             renderStaffGrid();
@@ -1027,7 +1085,7 @@
                 window.appState.isSpeakerActive = true;
                 window.appState.sessionStartTime = Date.now();
                 
-                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-emerald-100";
+                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
                 btnText.innerText = "監聽音響運作中...";
                 showToast("喇叭播放模式已啟動！藍牙音響待命中", "success");
