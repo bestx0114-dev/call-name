@@ -419,16 +419,16 @@
         import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // =====================================================================
-        // 🛠️ 自行部署設定區塊 (已幫您填寫 screenshot image_39a6e7.png 中的專屬金鑰！)
+        // 🛠️ 自行部署設定區塊 (已幫您填寫專屬金鑰！)
         // =====================================================================
         const USER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyCDCIxvrTUesekzG44UcdN5f1rrxcHn4u8",
-  authDomain: "smart-office-broadcast2.firebaseapp.com",
-  projectId: "smart-office-broadcast2",
-  storageBucket: "smart-office-broadcast2.firebasestorage.app",
-  messagingSenderId: "620583773496",
-  appId: "1:620583773496:web:df81fbdcd4853071070dcd"
-};
+            authDomain: "smart-office-broadcast2.firebaseapp.com",
+            projectId: "smart-office-broadcast2",
+            storageBucket: "smart-office-broadcast2.firebasestorage.app",
+            messagingSenderId: "620583773496",
+            appId: "1:620583773496:web:df81fbdcd4853071070dcd"
+        };
         
         const USER_APP_ID = "smart-office-broadcast2"; // 您的專案 ID
         // =====================================================================
@@ -1169,7 +1169,10 @@
 
             window.speechSynthesis.cancel(); 
             
-            const utterance = new SpeechSynthesisUtterance(text);
+            // 💡 關鍵語音優化：將「~」與「～」自動轉換成中文逗號，語音引擎會完美過濾「波浪號」讀音，並觸發自然停頓！
+            const speechText = text.replace(/[~～]/g, '，');
+            
+            const utterance = new SpeechSynthesisUtterance(speechText);
             
             const rateInput = document.getElementById('setting-rate');
             const pitchInput = document.getElementById('setting-pitch');
