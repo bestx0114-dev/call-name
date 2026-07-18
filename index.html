@@ -134,10 +134,10 @@
                             </button>
                         </div>
                         
-                        <!-- 步驟1：選擇員工 -->
+                        <!-- 步驟1：選擇員工 (支援多選) -->
                         <div class="mb-5">
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇員工 (可搜尋)</label>
+                                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇人員 (可選多人 / 支援搜尋)</label>
                                 <input type="text" id="search-staff" oninput="filterStaff()" placeholder="搜尋名字..." class="text-xs border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div id="staff-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
@@ -145,10 +145,10 @@
                             </div>
                         </div>
 
-                        <!-- 步驟2：選擇處所 -->
+                        <!-- 步驟2：選擇處所 (可選填) -->
                         <div class="mb-5">
                             <div class="flex justify-between items-center mb-2">
-                                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇目的地/處所</label>
+                                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇目的地/處所 (再點一次可取消選取，變為無地點廣播)</label>
                                 <input type="text" id="search-location" oninput="filterLocations()" placeholder="搜尋處所..." class="text-xs border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
                             <div id="location-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
@@ -475,7 +475,7 @@
             appId: "1:620583773496:web:df81fbdcd4853071070dcd"
         };
         
-        const USER_APP_ID = "smart-office-broadcast2"; // 您的專案 ID
+        const USER_APP_ID = "smart-office-broadcast2"; 
         // =====================================================================
 
         // 全域狀態定義
@@ -503,8 +503,8 @@
             locations: [],
             templates: [],
             
-            // 當前廣播選取器
-            selectedStaff: '',
+            // 當前廣播選取器 (選取多位員工，改為陣列結構儲存)
+            selectedStaff: [],
             selectedLocation: '',
             selectedTemplate: ''
         };
@@ -541,12 +541,10 @@
             try {
                 let firebaseConfig;
 
-                // 優先使用使用者手動在程式中設定的資訊
                 if (USER_FIREBASE_CONFIG) {
                     firebaseConfig = USER_FIREBASE_CONFIG;
                     window.appState.appId = USER_APP_ID || 'smart-office-broadcast2';
                 } else if (typeof __firebase_config !== 'undefined') {
-                    // 本地環境自動注入
                     firebaseConfig = JSON.parse(__firebase_config);
                 } else {
                     throw new Error("無可用 Firebase 設定，改為單機模擬模式");
@@ -559,7 +557,6 @@
                 window.appState.db = db;
                 window.appState.auth = auth;
 
-                // 嘗試登入並補捉具體錯誤
                 let userCredential;
                 try {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -570,7 +567,7 @@
                 } catch (authError) {
                     console.error("Firebase Authentication 失敗:", authError);
                     if (authError.code === 'auth/operation-not-allowed') {
-                        throw new Error("【未啟用驗證：auth/operation-not-allowed】\n請到 Firebase 控制台的左側選單，選擇 Authentication -> 點擊 Sign-in method 頁籤 -> 啟用「匿名 (Anonymous)」登入！這一步驟非常重要，一定要手動開啟！");
+                        throw new Error("【未啟用驗證：auth/operation-not-allowed】\n請到 Firebase 控制台的左側選單，選擇 Authentication -> 點擊 Sign-in method 頁籤 -> 啟用「匿名 (Anonymous)」登入！这一步驟非常重要，一定要手動開啟！");
                     } else if (authError.code === 'auth/network-request-failed') {
                         throw new Error("【網路連線受阻】\n連線至 Firebase Auth 失敗。這通常是因為瀏覽器（如 Brave 或 Chrome 的 AdBlock 廣告阻擋插件）阻擋了驗證網址。請暫時將此網域加入白名單後重試。");
                     } else {
@@ -585,18 +582,13 @@
                 badge.innerText = `ID: ${window.appState.userId.substring(0, 8)}`;
                 badge.classList.remove('hidden');
 
-                // 啟動資料監聽與初始化
                 setupRealtimeSync();
 
             } catch (error) {
                 console.warn("Firebase 初始化失敗:", error);
                 statusDot.className = "h-2 w-2 rounded-full bg-red-500";
                 statusText.innerText = "單機演示模式";
-                
-                // 跳出精美的除錯提示引導
                 showFirebaseDebugModal(error.message);
-                
-                // 本地模擬名單載入
                 loadMockData();
             }
         }
@@ -605,7 +597,6 @@
             const { db, appId } = window.appState;
             if (!db) return;
 
-            // 1. 監聽系統設定 (員工、地點、範本)
             const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'settings');
             
             onSnapshot(configDocRef, (docSnapshot) => {
@@ -615,7 +606,6 @@
                     window.appState.locations = data.locations || window.appState.defaultLocations;
                     window.appState.templates = data.templates || window.appState.defaultTemplates;
                 } else {
-                    // 若雲端完全無此設定，則進行首次初始化寫入
                     const initialConfig = {
                         staff: window.appState.defaultStaff,
                         locations: window.appState.defaultLocations,
@@ -623,7 +613,6 @@
                     };
                     setDoc(configDocRef, initialConfig).catch(err => {
                         console.error("資料庫寫入失敗:", err);
-                        showFirebaseDebugModal("【資料庫寫入權限拒絕：permission-denied】\n請確認您的 Firestore Database 規則 (Rules) 是否允許公用讀寫。請至 Firestore Database -> 選擇 規則 (Rules) 頁籤，將其設為測試模式（即 rules_version = '2'; service cloud.firestore { match /databases/{database}/documents { match /{document=**} { allow read, write: if true; } } }）");
                     });
                     
                     window.appState.staff = initialConfig.staff;
@@ -631,16 +620,13 @@
                     window.appState.templates = initialConfig.templates;
                 }
                 
-                // 渲染 UI 元件
                 renderUIPanels();
             }, (error) => {
                 console.error("設定資料流監聽失敗:", error);
                 showToast("同步名單設定失敗，已切換至本機快取", "error");
-                showFirebaseDebugModal("【資料庫讀取權限拒絕】\n您的 Firestore 資料庫規則不允許讀取，或是您尚未在控制台點擊「建立資料庫 (Create database)」。\n\n系統將自動切換為單機儲存模式運行。");
                 loadMockData();
             });
 
-            // 2. 監聽雲端廣播訊號
             const broadcastsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'broadcasts');
             
             onSnapshot(broadcastsColRef, (snapshot) => {
@@ -649,13 +635,9 @@
                     broadcasts.push({ id: doc.id, ...doc.data() });
                 });
 
-                // 排序
                 broadcasts.sort((a, b) => b.timestamp - a.timestamp);
-
-                // 更新發送紀錄 UI
                 renderHistory(broadcasts);
 
-                // 檢查是否有全新廣播需要播放
                 if (window.appState.isSpeakerActive) {
                     processIncomingBroadcasts(broadcasts);
                 }
@@ -664,23 +646,18 @@
             });
         }
 
-        // 本機快取模擬 (無 Firebase 連線時)
         function loadMockData() {
             window.appState.staff = JSON.parse(localStorage.getItem('mock_staff')) || window.appState.defaultStaff;
             window.appState.locations = JSON.parse(localStorage.getItem('mock_locations')) || window.appState.defaultLocations;
             window.appState.templates = JSON.parse(localStorage.getItem('mock_templates')) || window.appState.defaultTemplates;
             renderUIPanels();
             
-            // 讀取本地發送歷史
             const mockHistory = JSON.parse(localStorage.getItem('mock_history')) || [];
             renderHistory(mockHistory);
         }
 
-        // 啟動 Firebase 運作
         window.addEventListener('load', () => {
             initFirebase();
-            
-            // 精準加載本機與線上高品質語音引擎
             populateVoiceList();
             if (typeof window.speechSynthesis !== 'undefined') {
                 if (window.speechSynthesis.onvoiceschanged !== undefined) {
@@ -692,9 +669,6 @@
 
     <!-- 輔助與音效 JS 邏輯模組 -->
     <script>
-        // =====================================================================
-        // 💾 IndexedDB 儲存與管理自訂音效 (MP3 / WAV)
-        // =====================================================================
         let customChimeBuffer = null;
         let indexedDBInstance = null;
 
@@ -713,7 +687,6 @@
             console.error("無法開啟本地音效資料庫(IndexedDB)");
         };
 
-        // 從資料庫讀取已儲存的音效並解碼
         function loadStoredCustomChime() {
             if (!indexedDBInstance) return;
             const tx = indexedDBInstance.transaction(["audioStore"], "readonly");
@@ -727,24 +700,21 @@
             };
         }
 
-        // 解碼音效 ArrayBuffer
         function decodeAndPrepareAudio(arrayBuffer) {
             initAudioContext();
-            const copy = arrayBuffer.slice(0); // 複製一份，因解碼會排乾記憶體
+            const copy = arrayBuffer.slice(0); 
             globalAudioCtx.decodeAudioData(copy, (decodedBuffer) => {
                 customChimeBuffer = decodedBuffer;
                 const statusEl = document.getElementById('custom-chime-status');
                 if (statusEl) {
                     statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> 音效讀取成功 (${decodedBuffer.duration.toFixed(1)} 秒)</span>`;
                 }
-                console.log("自訂前奏音效載入並解碼成功！");
             }, (err) => {
                 console.error("音訊解碼失敗：", err);
                 showToast("音效解碼失敗，請確認上傳的是正確的音訊檔", "error");
             });
         }
 
-        // 使用者手動上傳自訂音效檔
         function uploadCustomChime(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -753,8 +723,6 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const arrayBuffer = e.target.result;
-
-                // 儲存至 IndexedDB
                 const tx = indexedDBInstance.transaction(["audioStore"], "readwrite");
                 const store = tx.objectStore("audioStore");
                 store.put(arrayBuffer, "customChime");
@@ -763,14 +731,10 @@
                     decodeAndPrepareAudio(arrayBuffer);
                     showToast("前奏音效上傳成功並已本地儲存！", "success");
                 };
-                tx.onerror = function() {
-                    showToast("音效儲存至資料庫時失敗", "error");
-                };
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 切換音效樣式時更新 UI
         function changeChimeStyle() {
             const style = document.getElementById('setting-chime-style').value;
             const customZone = document.getElementById('custom-chime-zone');
@@ -782,7 +746,6 @@
             localStorage.setItem('preferred_chime_style', style);
         }
 
-        // 頁面初始化時回復先前存的音效樣式選擇
         window.addEventListener('load', () => {
             const savedStyle = localStorage.getItem('preferred_chime_style') || 'classic_4';
             const selectEl = document.getElementById('setting-chime-style');
@@ -792,7 +755,6 @@
             }
         });
 
-        // 除錯彈窗控制
         function showFirebaseDebugModal(msg) {
             const modal = document.getElementById('debug-modal');
             const msgEl = document.getElementById('debug-error-msg');
@@ -802,18 +764,13 @@
             }
         }
 
-        // 全域共用一個解鎖後的 AudioContext
         let globalAudioCtx = null;
 
+        // 💡 修正 iPhone 背景 YouTube Music 被切斷的 Bug：
+        // 移除原有的 navigator.audioSession.type = 'playback' 強制鎖定宣告。
+        // 當此宣告移除後，網頁會以 Ambient 共享模式與系統音訊混合，藍牙公司主機播歌時就不會被強行砍掉 YouTube Music！
         function initAudioContext() {
             if (!globalAudioCtx) {
-                try {
-                    if (navigator.audioSession) {
-                        navigator.audioSession.type = 'playback';
-                    }
-                } catch (e) {
-                    console.log("不支援 audioSession 類別設定", e);
-                }
                 globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (globalAudioCtx.state === 'suspended') {
@@ -828,22 +785,14 @@
             }
         }
 
-        // =====================================================================
-        // 🔒 Wake Lock 螢幕防休眠防斷線技術
-        // =====================================================================
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try {
                     window.appState.wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('🔒 Wake Lock 螢幕防休眠成功啟動！手機將不會自動關螢幕。');
-                    window.appState.wakeLock.addEventListener('release', () => {
-                        console.log('🔒 Wake Lock 釋放，螢幕回復預設休眠機制。');
-                    });
+                    console.log('🔒 Wake Lock 螢幕防休眠成功啟動！');
                 } catch (err) {
-                    console.warn(`🔒 Wake Lock 啟動失敗: ${err.name}, ${err.message}`);
+                    console.warn(`🔒 Wake Lock 啟動失敗: ${err.name}`);
                 }
-            } else {
-                console.warn('🔒 您的瀏覽器不支援 Wake Lock 螢幕防休眠技術。');
             }
         }
 
@@ -860,9 +809,6 @@
             }
         });
 
-        // =====================================================================
-        // 🌑 模擬關螢幕省電防燒屏模式
-        // =====================================================================
         function toggleBlackout(show) {
             const blackout = document.getElementById('blackout-screen');
             if (show) {
@@ -878,7 +824,6 @@
             }
         }
 
-        // 渲染主控台所有變動元件
         function renderUIPanels() {
             renderStaffGrid();
             renderLocationGrid();
@@ -886,7 +831,6 @@
             renderSettingsPanel();
         }
 
-        // 摺疊/開啟批次匯入面板
         function toggleBulkPanel(type) {
             const panel = document.getElementById(`bulk-panel-${type}`);
             if (panel.classList.contains('hidden')) {
@@ -896,7 +840,6 @@
             }
         }
 
-        // 批次文字匯入：員工姓名
         function importStaffText() {
             const textarea = document.getElementById('bulk-staff-text');
             const rawText = textarea.value.trim();
@@ -906,11 +849,6 @@
             }
 
             const names = rawText.split(/[\n,，、\s]+/).map(n => n.trim()).filter(n => n.length > 0);
-            if (names.length === 0) {
-                showToast("未偵測到任何有效的姓名資訊", "warning");
-                return;
-            }
-
             const existing = window.appState.staff;
             const added = [];
             names.forEach(name => {
@@ -930,7 +868,6 @@
             }
         }
 
-        // 批次文字匯入：辦公處所
         function importLocationText() {
             const textarea = document.getElementById('bulk-location-text');
             const rawText = textarea.value.trim();
@@ -940,11 +877,6 @@
             }
 
             const locs = rawText.split(/[\n,，、\s]+/).map(l => l.trim()).filter(l => l.length > 0);
-            if (locs.length === 0) {
-                showToast("未偵測到任何有效的處所資訊", "warning");
-                return;
-            }
-
             const existing = window.appState.locations;
             const added = [];
             locs.forEach(loc => {
@@ -964,7 +896,6 @@
             }
         }
 
-        // Excel/CSV 檔案匯入：員工姓名
         function importStaffExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -984,11 +915,6 @@
                         .map(cell => String(cell).trim())
                         .filter(name => name.length > 0 && name !== '姓名' && name !== 'Name' && name !== 'name');
 
-                    if (names.length === 0) {
-                        showToast("Excel 中未找到任何有效的姓名資料", "warning");
-                        return;
-                    }
-
                     const existing = window.appState.staff;
                     const added = [];
                     names.forEach(name => {
@@ -1003,18 +929,14 @@
                         showToast(`成功由 Excel 匯入 ${added.length} 筆員工姓名！`, "success");
                         event.target.value = '';
                         toggleBulkPanel('staff');
-                    } else {
-                        showToast("Excel 中的員工名冊皆已存在", "info");
                     }
                 } catch (err) {
-                    console.error(err);
-                    showToast("解析 Excel 失敗，請確保格式正確或另存為 .csv", "error");
+                    showToast("解析 Excel 失敗", "error");
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // Excel/CSV 檔案匯入：辦公處所
         function importLocationExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -1034,11 +956,6 @@
                         .map(cell => String(cell).trim())
                         .filter(loc => loc.length > 0 && loc !== '處所' && loc !== '地點' && loc !== 'Location' && loc !== 'location');
 
-                    if (locs.length === 0) {
-                        showToast("Excel 中未找到任何有效的處所地點資料", "warning");
-                        return;
-                    }
-
                     const existing = window.appState.locations;
                     const added = [];
                     locs.forEach(loc => {
@@ -1053,37 +970,33 @@
                         showToast(`成功由 Excel 匯入 ${added.length} 筆處所地點！`, "success");
                         event.target.value = '';
                         toggleBulkPanel('location');
-                    } else {
-                        showToast("Excel 中的處所皆已存在", "info");
                     }
                 } catch (err) {
-                    console.error(err);
-                    showToast("解析 Excel 失敗，請確認檔案類型是否正確", "error");
+                    showToast("解析 Excel 失敗", "error");
                 }
             };
             reader.readAsArrayBuffer(file);
         }
 
-        // 渲染員工網格
+        // 💡 升級人員按鈕網格渲染：支援同時複選多個名單
         function renderStaffGrid() {
             const grid = document.getElementById('staff-grid');
             grid.innerHTML = '';
             
             window.appState.staff.forEach(name => {
-                const isSelected = window.appState.selectedStaff === name;
+                const isSelected = window.appState.selectedStaff.includes(name);
                 const btn = document.createElement('button');
                 btn.className = `px-3.5 py-2 rounded-xl text-sm font-medium transition active:scale-95 ${
                     isSelected 
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20' 
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 ring-2 ring-indigo-400' 
                     : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
                 }`;
-                btn.innerText = name;
+                btn.innerHTML = isSelected ? `<i class="fa-solid fa-check text-xs mr-1"></i>${name}` : name;
                 btn.onclick = () => selectStaff(name);
                 grid.appendChild(btn);
             });
         }
 
-        // 篩選員工
         function filterStaff() {
             const query = document.getElementById('search-staff').value.toLowerCase();
             const btns = document.querySelectorAll('#staff-grid button');
@@ -1097,7 +1010,6 @@
             });
         }
 
-        // 篩選處所
         function filterLocations() {
             const query = document.getElementById('search-location').value.toLowerCase();
             const btns = document.querySelectorAll('#location-grid button');
@@ -1111,7 +1023,6 @@
             });
         }
 
-        // 渲染處所網格
         function renderLocationGrid() {
             const grid = document.getElementById('location-grid');
             grid.innerHTML = '';
@@ -1136,8 +1047,9 @@
             
             window.appState.templates.forEach(tpl => {
                 const isSelected = window.appState.selectedTemplate === tpl;
+                const staffPreview = window.appState.selectedStaff.length > 0 ? window.appState.selectedStaff.join('、') : '王小明';
                 const preview = tpl
-                    .replace(/\[姓名\]/g, window.appState.selectedStaff || '王小明')
+                    .replace(/\[姓名\]/g, staffPreview)
                     .replace(/\[地點\]/g, window.appState.selectedLocation || '辦公室');
 
                 const btn = document.createElement('button');
@@ -1155,9 +1067,8 @@
             });
         }
 
-        // 清除選取項目
         function clearSelection() {
-            window.appState.selectedStaff = '';
+            window.appState.selectedStaff = [];
             window.appState.selectedLocation = '';
             window.appState.selectedTemplate = '';
             document.getElementById('broadcast-preview-text').value = '';
@@ -1166,38 +1077,66 @@
             renderTemplateList();
         }
 
-        // 選取員工
+        // 💡 更改人員選取邏輯：支援多選，點擊已選人員則取消選取
         function selectStaff(name) {
-            window.appState.selectedStaff = name;
+            const index = window.appState.selectedStaff.indexOf(name);
+            if (index > -1) {
+                window.appState.selectedStaff.splice(index, 1);
+            } else {
+                window.appState.selectedStaff.push(name);
+            }
             renderStaffGrid();
             updatePreviewText();
+            renderTemplateList(); // 即時重整情境預覽
         }
 
-        // 選取處所
+        // 💡 更改地點選取邏輯：如果點擊已選的地點，則會取消它，實現無地點廣播
         function selectLocation(loc) {
-            window.appState.selectedLocation = loc;
+            if (window.appState.selectedLocation === loc) {
+                window.appState.selectedLocation = ''; 
+            } else {
+                window.appState.selectedLocation = loc;
+            }
             renderLocationGrid();
             updatePreviewText();
+            renderTemplateList();
         }
 
-        // 選取語句範本
         function selectTemplate(tpl) {
             window.appState.selectedTemplate = tpl;
             renderTemplateList();
             updatePreviewText();
         }
 
-        // 更新編譯後的廣播稿預覽
+        // 💡 智慧合成預覽稿：無地點時全自動修剪掉贅詞
         function updatePreviewText() {
-            const staff = window.appState.selectedStaff || '[員工姓名]';
-            const loc = window.appState.selectedLocation || '[處所地點]';
+            const staffArr = window.appState.selectedStaff;
+            const staff = staffArr.length > 0 ? staffArr.join('、') : '[員工姓名]';
+            const loc = window.appState.selectedLocation;
             let tpl = window.appState.selectedTemplate;
             
             if (!tpl) {
-                tpl = "[姓名]，請到[地點]～[姓名]，請到[地點]";
+                tpl = "[姓名]，請到[地點]～[姓名]，請到[地點]～";
             }
             
-            const compiled = tpl.replace(/\[姓名\]/g, staff).replace(/\[地點\]/g, loc);
+            let compiled = tpl.replace(/\[姓名\]/g, staff);
+            
+            if (loc) {
+                compiled = compiled.replace(/\[地點\]/g, loc);
+            } else {
+                // 如果沒有指定地點，智慧裁剪修剪掉範本內的「請到辦公室」、「至辦公室」等贅詞結構
+                compiled = compiled.replace(/請到\[地點\]/g, "")
+                                   .replace(/至\[地點\]/g, "")
+                                   .replace(/\[地點\]有您的/g, "有您的")
+                                   .replace(/\[地點\]/g, "");
+                                   
+                // 清理掉裁剪後可能連續殘留的逗號或波浪號標點
+                compiled = compiled.replace(/，，/g, "，").replace(/～～/g, "～").trim();
+                
+                if (compiled.startsWith('，') || compiled.startsWith('～')) {
+                    compiled = compiled.substring(1);
+                }
+            }
             document.getElementById('broadcast-preview-text').value = compiled;
         }
 
@@ -1212,8 +1151,8 @@
                 text: text,
                 timestamp: Date.now(),
                 sender: window.appState.userId || 'local-client',
-                name: window.appState.selectedStaff || '自訂語音',
-                location: window.appState.selectedLocation || '全區'
+                name: window.appState.selectedStaff.length > 0 ? window.appState.selectedStaff.join('、') : '自訂語音',
+                location: window.appState.selectedLocation || '無特定地點'
             };
 
             const db = window.appState.db;
@@ -1224,22 +1163,18 @@
                     showToast("廣播已送上雲端！音響端將立刻播放", "success");
                     clearSelection();
                 } catch (error) {
-                    console.error("寫入雲端廣播錯誤:", error);
-                    showToast("送出失敗，已轉用單機模擬記錄", "error");
                     saveToMockHistory(payload);
                 }
             } else {
                 saveToMockHistory(payload);
-                showToast("單機廣播模擬發送！(請至喇叭接收端播放測試)", "success");
+                showToast("單機廣播模擬發送！", "success");
                 clearSelection();
-                
                 if (window.appState.isSpeakerActive) {
                     speakText(text);
                 }
             }
         }
 
-        // 單機模式備份歷史
         function saveToMockHistory(payload) {
             const mockHistory = JSON.parse(localStorage.getItem('mock_history')) || [];
             payload.id = 'mock-' + Date.now();
@@ -1248,7 +1183,6 @@
             renderHistory(mockHistory);
         }
 
-        // 渲染發送歷史紀錄
         function renderHistory(broadcasts) {
             const container = document.getElementById('history-container');
             if (broadcasts.length === 0) {
@@ -1286,7 +1220,6 @@
             });
         }
 
-        // 重新發送廣播
         function reBroadcast(text) {
             document.getElementById('broadcast-preview-text').value = text;
             sendBroadcast();
@@ -1302,7 +1235,6 @@
                 window.appState.isSpeakerActive = true;
                 window.appState.sessionStartTime = Date.now();
                 
-                // 初始化並啟用 iOS 共用音訊解鎖，保障靜音鍵不會影響播放
                 initAudioContext();
                 
                 try {
@@ -1310,33 +1242,28 @@
                     dummyUtterance.volume = 0;
                     dummyUtterance.rate = 10;
                     window.speechSynthesis.speak(dummyUtterance);
-                } catch (e) {
-                    console.log("iOS TTS 預先解鎖失敗", e);
-                }
+                } catch (e) {}
 
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
                 btnText.innerText = "監聽音響運作中...";
-                if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); // 顯示「模擬關螢幕」按鈕
-                showToast("喇叭播放模式已啟動！藍牙音響待命中", "success");
+                if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); 
+                showToast("喇盤播放模式已啟動！藍牙音響待命中", "success");
                 
-                requestWakeLock(); // 🔒 啟動螢幕防休眠
+                requestWakeLock(); 
                 playChimeSound();
             } else {
                 window.appState.isSpeakerActive = false;
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-power-off text-5xl";
                 btnText.innerText = "啟動監聽播放";
-                if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); // 隱藏「模擬關螢幕」按鈕
+                if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); 
                 showToast("監聽播放已關閉", "info");
                 
-                releaseWakeLock(); // 🔒 解除螢幕鎖定
+                releaseWakeLock(); 
             }
         }
 
-        // =====================================================================
-        // 🎼 智慧前奏音效產生器 (Web Audio API) & 自訂音效播音核心
-        // =====================================================================
         function playChimeSound() {
             return new Promise((resolve) => {
                 try {
@@ -1344,7 +1271,6 @@
                     const ctx = globalAudioCtx;
                     const style = document.getElementById('setting-chime-style').value;
 
-                    // 1. 若選擇自訂上傳且有成功載入的 buffer，直接播放自訂 MP3
                     if (style === 'custom' && customChimeBuffer) {
                         const source = ctx.createBufferSource();
                         source.buffer = customChimeBuffer;
@@ -1354,115 +1280,87 @@
                         return;
                     }
 
-                    // 2. 否則，使用 Web Audio 聲學物理建模即時拉出音色
                     const now = ctx.currentTime;
 
                     if (style === 'standard') {
-                        // 🔔 傳統叮咚 (雙音)
-                        playSingleSynthNote(554.37, now, 0.8);       // C#5
-                        playSingleSynthNote(440.00, now + 0.25, 1.2); // A4
+                        playSingleSynthNote(554.37, now, 0.8);       
+                        playSingleSynthNote(440.00, now + 0.25, 1.2); 
                         setTimeout(resolve, 1400);
-
                     } else if (style === 'westminster') {
-                        // ⛪ 西敏寺經典鐘聲 (4音縮減版)
-                        playSingleSynthNote(329.63, now, 0.9);        // E4
-                        playSingleSynthNote(261.63, now + 0.4, 0.9);  // C4
-                        playSingleSynthNote(293.66, now + 0.8, 0.9);  // D4
-                        playSingleSynthNote(196.00, now + 1.2, 1.4);  // G3
+                        playSingleSynthNote(329.63, now, 0.9);        
+                        playSingleSynthNote(261.63, now + 0.4, 0.9);  
+                        playSingleSynthNote(293.66, now + 0.8, 0.9);  
+                        playSingleSynthNote(196.00, now + 1.2, 1.4);  
                         setTimeout(resolve, 2600);
-
                     } else {
-                        // 🏢 百貨公司經典 4 音 - 上行 (登~登~登~登~)
-                        playSingleSynthNote(349.23, now, 1.2);        // F4
-                        playSingleSynthNote(440.00, now + 0.3, 1.2);  // A4
-                        playSingleSynthNote(523.25, now + 0.6, 1.2);  // C5
-                        playSingleSynthNote(698.46, now + 0.9, 1.6);  // F5
+                        playSingleSynthNote(349.23, now, 1.2);        
+                        playSingleSynthNote(440.00, now + 0.3, 1.2);  
+                        playSingleSynthNote(523.25, now + 0.6, 1.2);  
+                        playSingleSynthNote(698.46, now + 0.9, 1.6);  
                         setTimeout(resolve, 2400);
                     }
-
                 } catch (e) {
-                    console.warn("前奏播放發生問題", e);
                     resolve();
                 }
             });
         }
 
-        // =====================================================================
-        // 🎼 智慧結束音效產生器 - 下行 (登~登~登~登~ 由高往低)
-        // =====================================================================
         function playEndingChimeSound() {
             return new Promise((resolve) => {
                 try {
                     initAudioContext();
                     const ctx = globalAudioCtx;
                     const style = document.getElementById('setting-chime-style').value;
-
-                    // 若為自訂音效，廣播結束時我們依然播放對應的下行音效作為標準收尾，維持公司廣播的專業秩序
                     const now = ctx.currentTime;
 
                     if (style === 'standard') {
-                        // 🔔 反向叮咚 (先低後高：咚~叮~)
-                        playSingleSynthNote(440.00, now, 0.8);       // A4
-                        playSingleSynthNote(554.37, now + 0.25, 1.2); // C#5
+                        playSingleSynthNote(440.00, now, 0.8);       
+                        playSingleSynthNote(554.37, now + 0.25, 1.2); 
                         setTimeout(resolve, 1400);
-
                     } else if (style === 'westminster') {
-                        // ⛪ 西敏寺鐘聲反向 (G3 -> D4 -> C4 -> E4)
                         playSingleSynthNote(196.00, now, 0.9);
                         playSingleSynthNote(293.66, now + 0.4, 0.9);
                         playSingleSynthNote(261.63, now + 0.8, 0.9);
                         playSingleSynthNote(329.63, now + 1.2, 1.4);
                         setTimeout(resolve, 2600);
-
                     } else {
-                        // 🏢 百貨公司經典 4 音 - 下行 (登~登~登~登~ 由高往低)
-                        playSingleSynthNote(698.46, now, 1.2);        // F5 (高)
-                        playSingleSynthNote(523.25, now + 0.3, 1.2);  // C5
-                        playSingleSynthNote(440.00, now + 0.6, 1.2);  // A4
-                        playSingleSynthNote(349.23, now + 0.9, 1.6);  // F4 (低)
+                        playSingleSynthNote(698.46, now, 1.2);        
+                        playSingleSynthNote(523.25, now + 0.3, 1.2);  
+                        playSingleSynthNote(440.00, now + 0.6, 1.2);  
+                        playSingleSynthNote(349.23, now + 0.9, 1.6);  
                         setTimeout(resolve, 2400);
                     }
-
                 } catch (e) {
-                    console.warn("結束提示音播放發生問題", e);
                     resolve();
                 }
             });
         }
 
-        // 產生一個帶有溫暖諧波(Harmonics)與自然衰減(Envelope)的合成鐘聲單音
         function playSingleSynthNote(frequency, startTime, duration) {
             const ctx = globalAudioCtx;
-            
-            // 主波 (基音)
             const oscElement = ctx.createOscillator();
             const gainNode = ctx.createGain();
             oscElement.type = 'sine';
             oscElement.frequency.setValueAtTime(frequency, startTime);
             
-            // 諧波 (副音)
             const subOsc = ctx.createOscillator();
             const subGain = ctx.createGain();
             subOsc.type = 'sine';
-            subOsc.frequency.setValueAtTime(frequency * 2, startTime); // 兩倍頻率
+            subOsc.frequency.setValueAtTime(frequency * 2, startTime); 
 
-            // 衰減控制
             gainNode.gain.setValueAtTime(0.18, startTime);
             gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
             subGain.gain.setValueAtTime(0.06, startTime);
-            subGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.5); // 諧波衰減較快
+            subGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.5); 
 
-            // 連結線路
             oscElement.connect(gainNode);
             subOsc.connect(subGain);
-            
             gainNode.connect(ctx.destination);
             subGain.connect(ctx.destination);
 
             oscElement.start(startTime);
             oscElement.stop(startTime + duration);
-
             subOsc.start(startTime);
             subOsc.stop(startTime + duration);
         }
@@ -1479,30 +1377,24 @@
         }
 
         async function speakText(text) {
-            const activationZone = document.getElementById('speaker-activation-zone');
+            const activationZone = document.getElementById('btn-activate-speaker');
             const visualizer = document.getElementById('playing-visualizer');
             const playingText = document.getElementById('currently-playing-text');
             const speakerStateSub = document.getElementById('speaker-state-sub');
             
             if (visualizer) {
-                activationZone.classList.add('hidden');
+                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
                 visualizer.classList.remove('hidden');
                 playingText.innerText = `「${text}」`;
                 if (speakerStateSub) speakerStateSub.innerText = "正在播報...";
             }
 
-            // 1. 播放「前奏音效」 (支援經典四音、西敏寺鐘聲或上傳的 MP3)
             await playChimeSound();
 
-            // 2. 進行真人語音合成發聲
-            if (typeof window.speechSynthesis === 'undefined') {
-                showToast("不支援語音合成！", "error");
-                return;
-            }
+            if (typeof window.speechSynthesis === 'undefined') return;
 
             window.speechSynthesis.cancel(); 
             
-            // 將「~」與「～」自動轉換成中文逗號，語音引擎會完美過濾「波浪號」讀音，並觸發自然停頓！
             const speechText = text.replace(/[~～]/g, '，');
             const utterance = new SpeechSynthesisUtterance(speechText);
             
@@ -1523,54 +1415,42 @@
                 if (selectedVoice) utterance.voice = selectedVoice;
             } else {
                 const bestVoice = getOptimalChineseVoice(voices);
-                if (bestVoice) {
-                    utterance.voice = bestVoice;
-                    console.log("已智慧選擇最優音質語音:", bestVoice.name);
-                }
+                if (bestVoice) utterance.voice = bestVoice;
             }
 
-            // 🚨 智慧防卡死守護機制 (watchdog)
             const safetyTimeout = setTimeout(() => {
                 if (visualizer && !visualizer.classList.contains('hidden')) {
-                    console.warn("偵測到語音合成發生超時，安全看門狗啟動，強行回復播放待命狀態");
                     window.activeUtterance = null;
                     visualizer.classList.add('hidden');
-                    activationZone.classList.remove('hidden');
+                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
                 }
             }, 25000);
 
-            // 播報完畢後的生命週期 (包含 2 秒後的下行結束音播放)
             utterance.onend = () => {
                 clearTimeout(safetyTimeout);
                 window.activeUtterance = null;
-
                 if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
 
-                // 📢 廣播結束後兩秒播放結束提示音 (登~登~登~登~ 由高往低)
                 setTimeout(async () => {
                     if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
                     await playEndingChimeSound();
 
-                    // 結束提示音播完後，緩衝 0.5 秒關閉視覺化，回到待命狀態
                     setTimeout(() => {
                         if (visualizer) {
                             visualizer.classList.add('hidden');
-                            activationZone.classList.remove('hidden');
+                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
                         }
                     }, 500);
                 }, 200);
             };
 
-            utterance.onerror = (e) => {
-                console.error("語音播放發生錯誤:", e);
+            utterance.onerror = () => {
                 clearTimeout(safetyTimeout);
                 window.activeUtterance = null;
-                setTimeout(() => {
-                    if (visualizer) {
-                        visualizer.classList.add('hidden');
-                        activationZone.classList.remove('hidden');
-                    }
-                }, 1000);
+                if (visualizer) {
+                    visualizer.classList.add('hidden');
+                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                }
             };
 
             window.speechSynthesis.speak(utterance);
@@ -1585,29 +1465,25 @@
                 /Mei-Ja/i,
                 /Siri/i,
                 /Google.*國語.*臺灣/i,
-                /Google.*Mandarin/i,
-                /zh-TW/i,
-                /zh-HK/i,
-                /zh-CN/i
+                /Google.*Mandarin/i
             ];
-
             for (const pattern of priorityPatterns) {
                 const found = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
                 if (found) return found;
             }
-            
-            return voices.find(v => v.lang.includes('zh') || v.lang.includes('cmn'));
+            return voices.find(v => v.lang.includes('zh'));
         }
 
         function previewAudioLocally() {
             const text = document.getElementById('broadcast-preview-text').value.trim();
             if (!text) {
-                showToast("沒有選取內容，為您播放預設測試音！", "info");
                 speakText("王大同，請到會議室。");
                 return;
             }
             speakText(text);
         }
+
+        document.getElementById('setting-chime-style').addEventListener('change', changeChimeStyle);
 
         function testSpeakerSystem() {
             speakText("叮咚測試！系統運作正常，喇叭連線優良。");
@@ -1615,44 +1491,30 @@
 
         function populateVoiceList() {
             if (typeof speechSynthesis === 'undefined') return;
-            
             const voiceSelect = document.getElementById('setting-voice');
             if (!voiceSelect) return;
             
             const voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0) {
-                voiceSelect.innerHTML = '<option value="">正在載入系統語音包...</option>';
-                return;
-            }
+            if (voices.length === 0) return;
 
             const selectedURI = voiceSelect.value;
             voiceSelect.innerHTML = '';
             
-            const chineseVoices = voices.filter(voice => 
-                voice.lang.includes('zh') || voice.lang.includes('zho') || voice.lang.includes('cmn')
-            );
-
-            if (chineseVoices.length === 0) {
-                voiceSelect.innerHTML = '<option value="">系統無中文語音，使用預設引擎</option>';
-                return;
-            }
+            const chineseVoices = voices.filter(voice => voice.lang.includes('zh') || voice.lang.includes('cmn'));
+            if (chineseVoices.length === 0) return;
 
             const highQualityVoices = [];
             const standardVoices = [];
 
             chineseVoices.forEach(voice => {
                 const isNatural = voice.name.includes('Natural') || voice.name.includes('Online') || voice.name.includes('Mei-Ja') || voice.name.includes('Google');
-                if (isNatural) {
-                    highQualityVoices.push(voice);
-                } else {
-                    standardVoices.push(voice);
-                }
+                if (isNatural) highQualityVoices.push(voice);
+                else standardVoices.push(voice);
             });
 
             if (highQualityVoices.length > 0) {
                 const optGroupHigh = document.createElement('optgroup');
                 optGroupHigh.label = "✨ 推薦：AI 類神經真人音質 (聽起來像真人)";
-                
                 highQualityVoices.forEach(voice => {
                     const option = document.createElement('option');
                     option.textContent = `${voice.name} (${voice.lang})`;
@@ -1665,8 +1527,7 @@
 
             if (standardVoices.length > 0) {
                 const optGroupStandard = document.createElement('optgroup');
-                optGroupStandard.label = "🤖 一般：傳統合成音質 (聽起來較像機器)";
-                
+                optGroupStandard.label = "🤖 一般：傳統合成音質";
                 standardVoices.forEach(voice => {
                     const option = document.createElement('option');
                     option.textContent = `${voice.name} (${voice.lang})`;
@@ -1677,11 +1538,9 @@
                 voiceSelect.appendChild(optGroupStandard);
             }
 
-            if (!selectedURI || selectedURI === "") {
+            if (!selectedURI) {
                 const optimal = getOptimalChineseVoice(voices);
-                if (optimal) {
-                    voiceSelect.value = optimal.voiceURI;
-                }
+                if (optimal) voiceSelect.value = optimal.voiceURI;
             }
         }
 
@@ -1700,7 +1559,6 @@
             const list = document.getElementById(elementId);
             if (!list) return;
             list.innerHTML = '';
-            
             dataset.forEach((item, index) => {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center px-4 py-3 text-sm hover:bg-slate-50 transition";
@@ -1718,7 +1576,6 @@
             const list = document.getElementById('settings-template-list');
             if (!list) return;
             list.innerHTML = '';
-            
             window.appState.templates.forEach((item, index) => {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center px-4 py-3 text-xs hover:bg-slate-50 transition gap-4";
@@ -1735,13 +1592,10 @@
         async function saveConfig() {
             const db = window.appState.db;
             const { appId, staff, locations, templates } = window.appState;
-            
             if (db && window.dbOps) {
                 try {
                     await window.dbOps.saveSettings(appId, { staff, locations, templates });
-                } catch (e) {
-                    console.error("雲端設定同步失敗:", e);
-                }
+                } catch (e) {}
             } else {
                 localStorage.setItem('mock_staff', JSON.stringify(staff));
                 localStorage.setItem('mock_locations', JSON.stringify(locations));
@@ -1754,65 +1608,46 @@
             const input = document.getElementById('new-staff-name');
             const name = input.value.trim();
             if (!name) return;
-            if (window.appState.staff.includes(name)) {
-                showToast("此員工姓名已在名冊中！", "warning");
-                return;
-            }
+            if (window.appState.staff.includes(name)) return;
             window.appState.staff.push(name);
             input.value = '';
             saveConfig();
-            showToast(`已新增員工：${name}`, "success");
         }
 
         function deleteStaff(index) {
-            const name = window.appState.staff[index];
             window.appState.staff.splice(index, 1);
             saveConfig();
-            showToast(`已刪除員工：${name}`, "info");
         }
 
         function addNewLocation() {
             const input = document.getElementById('new-location-name');
             const loc = input.value.trim();
             if (!loc) return;
-            if (window.appState.locations.includes(loc)) {
-                showToast("此處所/辦公室已存在！", "warning");
-                return;
-            }
+            if (window.appState.locations.includes(loc)) return;
             window.appState.locations.push(loc);
             input.value = '';
             saveConfig();
-            showToast(`已新增處所：${loc}`, "success");
         }
 
         function deleteLocation(index) {
-            const loc = window.appState.locations[index];
             window.appState.locations.splice(index, 1);
             saveConfig();
-            showToast(`已刪除處所：${loc}`, "info");
         }
 
         function addNewTemplate() {
             const input = document.getElementById('new-template-text');
             const tpl = input.value.trim();
-            if (!tpl) return;
-            if (!tpl.includes('[姓名]') || !tpl.includes('[地點]')) {
-                showToast("範本必須包含 [姓名] 與 [地點] 佔位符號！", "warning");
-                return;
-            }
+            if (!tpl || !tpl.includes('[姓名]') || !tpl.includes('[地點]')) return;
             window.appState.templates.push(tpl);
             input.value = '';
             saveConfig();
-            showToast("廣播語句範本新增成功！", "success");
         }
 
         function deleteTemplate(index) {
             window.appState.templates.splice(index, 1);
             saveConfig();
-            showToast("語句範本已刪除", "info");
         }
 
-        // 徹底修正：今日發送紀錄清除功能 (在雲端模式下能一鍵刪除雲端資料)
         async function clearHistory() {
             const db = window.appState.db;
             if (db && window.dbOps) {
@@ -1822,8 +1657,7 @@
                     await window.dbOps.clearBroadcasts(appId);
                     showToast("已成功清空所有人的雲端歷史紀錄！", "success");
                 } catch (e) {
-                    console.error("清除雲端發送紀錄失敗:", e);
-                    showToast("清除紀錄失敗，請檢查網路連線", "error");
+                    showToast("清除紀錄失敗", "error");
                 }
             } else {
                 localStorage.removeItem('mock_history');
@@ -1836,53 +1670,15 @@
             document.getElementById('panel-broadcaster').classList.add('hidden');
             document.getElementById('panel-speaker').classList.add('hidden');
             document.getElementById('panel-settings').classList.add('hidden');
-            
             document.getElementById(`panel-${tabName}`).classList.remove('hidden');
 
             const tabs = ['broadcaster', 'speaker', 'settings'];
             tabs.forEach(t => {
                 const tabBtn = document.getElementById(`tab-${t}`);
-                if (t === tabName) {
-                    tabBtn.className = "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm";
-                } else {
-                    tabBtn.className = "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm";
-                }
+                tabBtn.className = t === tabName 
+                    ? "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm"
+                    : "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm";
             });
-        }
-
-        function showToast(message, type = "info") {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            let icon = "fa-circle-info text-blue-500";
-            let border = "border-blue-100";
-            if (type === "success") {
-                icon = "fa-circle-check text-emerald-500";
-                border = "border-emerald-100";
-            } else if (type === "warning") {
-                icon = "fa-triangle-exclamation text-amber-500";
-                border = "border-amber-100";
-            } else if (type === "error") {
-                icon = "fa-circle-xmark text-red-500";
-                border = "border-red-100";
-            }
-
-            toast.className = `flex items-center space-x-3 bg-white border ${border} px-4 py-3.5 rounded-xl shadow-lg pointer-events-auto transition-all duration-300 transform translate-y-2 opacity-0`;
-            toast.innerHTML = `
-                <i class="fa-solid ${icon} text-lg shrink-0"></i>
-                <p class="text-sm font-semibold text-slate-700">${message}</p>
-            `;
-
-            container.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            }, 10);
-
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-[-10px]');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
         }
     </script>
 </body>
