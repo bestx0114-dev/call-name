@@ -27,6 +27,7 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
+    <!-- 模擬關螢幕 (待命省電防燒屏) 全螢幕黑色遮罩 -->
     <div id="blackout-screen" onclick="toggleBlackout(false)" class="fixed inset-0 bg-black z-[100] hidden flex flex-col items-center justify-center text-slate-700 select-none cursor-pointer">
         <div class="text-center space-y-4 animate-pulse">
             <i class="fa-solid fa-moon text-6xl text-slate-800"></i>
@@ -35,6 +36,7 @@
         </div>
     </div>
 
+    <!-- 雲端診斷除錯提示彈窗 -->
     <div id="debug-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-100 space-y-4">
             <div class="flex items-center space-x-3 text-red-600">
@@ -380,7 +382,7 @@
                             <label class="block font-semibold text-slate-500 mb-1">廣播類型</label>
                             <select id="sched-type" onchange="toggleSchedTypeInputs()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-medium">
                                 <option value="tts">📢 語音文字播報 (TTS)</option>
-                                <option value="audio">🎵 播放音樂 (上傳檔或貼上網址)</option>
+                                <option value="audio">🎵 播放音樂 (GitHub Pages / 網路網址)</option>
                             </select>
                         </div>
                     </div>
@@ -420,22 +422,23 @@
                     <div id="sched-audio-zone" class="hidden space-y-3">
                         <div class="flex items-center gap-4 text-xs font-semibold text-slate-600 border-b border-slate-200/60 pb-2">
                             <label class="inline-flex items-center space-x-1.5 cursor-pointer">
-                                <input type="radio" name="audio-mode" value="file" checked onchange="toggleAudioModeInput()" class="accent-indigo-600">
-                                <span>📁 方法 A：上傳電腦/手機音檔 (最高 20MB)</span>
+                                <input type="radio" name="audio-mode" value="url" checked onchange="toggleAudioModeInput()" class="accent-indigo-600">
+                                <span>🌐 建議：貼上 GitHub Pages 或網路 MP3 音檔網址 (穩定性 100%，無容量限制)</span>
                             </label>
                             <label class="inline-flex items-center space-x-1.5 cursor-pointer">
-                                <input type="radio" name="audio-mode" value="url" onchange="toggleAudioModeInput()" class="accent-indigo-600">
-                                <span>🌐 方法 B：貼上 Google Drive / MP3 網址</span>
+                                <input type="radio" name="audio-mode" value="file" onchange="toggleAudioModeInput()" class="accent-indigo-600">
+                                <span>📁 備用：直接上傳本地音檔 (最高 20MB)</span>
                             </label>
                         </div>
 
-                        <div id="audio-input-file-zone" class="space-y-1.5">
-                            <input type="file" id="sched-audio-file" accept="audio/*" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
-                            <p id="sched-audio-status" class="text-[10px] text-slate-400">尚未選擇檔案</p>
+                        <div id="audio-input-url-zone" class="space-y-1.5">
+                            <input type="url" id="sched-audio-url" placeholder="例: https://[你的帳號].github.io/[專案名稱]/offwork.mp3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono">
+                            <p class="text-[10px] text-slate-500">💡 <b>GitHub 網址指南</b>：直接上傳檔至 GitHub Repository 後，網址填入 <code class="bg-slate-200 px-1 py-0.5 rounded text-indigo-700">https://帳號.github.io/專案名/檔名.mp3</code>，即刻享有穩定免費的 CDN 高音質廣播！</p>
                         </div>
 
-                        <div id="audio-input-url-zone" class="hidden space-y-1.5">
-                            <input type="url" id="sched-audio-url" placeholder="https://drive.google.com/file/d/.../view?usp=drive_link" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono">
+                        <div id="audio-input-file-zone" class="hidden space-y-1.5">
+                            <input type="file" id="sched-audio-file" accept="audio/*" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                            <p id="sched-audio-status" class="text-[10px] text-slate-400">尚未選擇檔案</p>
                         </div>
                     </div>
 
@@ -832,7 +835,6 @@
             renderSettingsPanel();
         }
 
-        // 📦 全新：渲染驗貨桌專用一鍵呼叫按鈕網格
         function renderInspectionStaffGrid() {
             const grid = document.getElementById('inspection-staff-grid');
             if (!grid) return;
@@ -858,7 +860,6 @@
             });
         }
 
-        // ⚡ 驗貨桌專用一鍵呼叫發送邏輯
         async function quickCallToInspection(name) {
             const text = `${name}，請到驗貨桌～${name}，請到驗貨桌～`;
             const payload = {
@@ -1127,7 +1128,7 @@
             if (db && window.dbOps) {
                 try {
                     await window.dbOps.addBroadcast(window.appState.appId, payload);
-                    showToast("廣播已送上雲端！音響端將立刻播放", "success");
+                    showToast("廣播已送上雲端！音響端將庫刻播放", "success");
                     clearSelection();
                 } catch (error) {
                     saveToMockHistory(payload);
