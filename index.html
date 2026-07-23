@@ -245,7 +245,7 @@
             </div>
         </section>
 
-        <section id="panel-speaker" class="hidden max-w-2xl mx-auto">
+        <section id="panel-speaker" class="hidden max-w-3xl mx-auto space-y-6">
             <div class="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-indigo-800 to-indigo-900 text-white p-8 text-center relative">
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)]"></div>
@@ -256,28 +256,28 @@
                         </span>
                         <h2 class="text-2xl font-bold">📢 辦公室藍牙音響播放主機</h2>
                         <p class="text-sm text-indigo-200 max-w-md mx-auto">
-                            請將此裝置連接至公司的藍牙喇叭，並保持此網頁開啟。雲端廣播與定時排程將會自動在此處播放！
+                            請將此電腦連接至公司的藍牙喇叭並啟動監聽。雲端廣播與定時排程將會自動在此播放！
                         </p>
                     </div>
                 </div>
 
-                <div class="p-8 text-center space-y-8">
-                    <div id="speaker-activation-zone" class="py-6">
-                        <button id="btn-activate-speaker" onclick="toggleSpeakerActivation()" class="mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100">
+                <div class="p-6 md:p-8 space-y-8">
+                    <div id="speaker-activation-zone" class="py-4 text-center">
+                        <button id="btn-activate-speaker" onclick="toggleSpeakerActivation()" class="mx-auto w-52 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100">
                             <i id="speaker-icon" class="fa-solid fa-power-off text-5xl"></i>
                             <span id="speaker-btn-text" class="text-lg font-bold">啟動監聽播放</span>
                             <span class="text-[10px] text-indigo-200 px-3">點擊啟動藍牙喇叭模式</span>
                         </button>
                     </div>
 
-                    <div id="blackout-btn-zone" class="hidden">
+                    <div id="blackout-btn-zone" class="hidden text-center">
                         <button onclick="toggleBlackout(true)" class="mx-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition active:scale-95 flex items-center gap-2 shadow shadow-slate-900/20">
                             <i class="fa-solid fa-moon text-yellow-400"></i>
                             <span>進入模擬關閉螢幕 (省電/防燒屏待命)</span>
                         </button>
                     </div>
 
-                    <div id="playing-visualizer" class="hidden py-6 space-y-4">
+                    <div id="playing-visualizer" class="hidden py-4 space-y-4">
                         <div class="flex items-end justify-center space-x-1.5 h-16">
                             <div class="wave-bar w-2 bg-indigo-500 rounded-full"></div>
                             <div class="wave-bar w-2 bg-blue-500 rounded-full"></div>
@@ -285,61 +285,94 @@
                             <div class="wave-bar w-2 bg-blue-500 rounded-full"></div>
                             <div class="wave-bar w-2 bg-indigo-500 rounded-full"></div>
                         </div>
-                        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 max-w-md mx-auto">
+                        <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100 max-w-md mx-auto text-center">
                             <span id="speaker-state-sub" class="text-xs font-bold text-indigo-600 uppercase tracking-widest block mb-1">正在播報...</span>
                             <p id="currently-playing-text" class="text-lg font-bold text-slate-800">「叮咚～」</p>
                         </div>
                     </div>
 
-                    <div class="border-t border-slate-100 pt-6 text-left">
-                        <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
-                            <i class="fa-solid fa-music text-indigo-600"></i>
-                            <span>🎵 廣播前奏與結束音效設定</span>
-                        </h3>
+                    <!-- 🎵 辦公室背景音樂 (BGM) 控制台 (含智慧自動壓音) -->
+                    <div class="bg-indigo-50/60 p-5 rounded-2xl border border-indigo-100/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                                <i class="fa-solid fa-compact-disc text-indigo-600 animate-spin-slow"></i>
+                                <span>🎵 辦公室背景音樂播放器 (自動廣播避音/壓音)</span>
+                            </h3>
+                            <span class="text-[10px] bg-indigo-200 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">廣播時自動變小聲</span>
+                        </div>
+                        <p class="text-xs text-slate-500">不用開啟別的分頁！在此貼上 GitHub 上的背景音樂檔網址（或線上電台），廣播一響起，背景音樂會<b>全自動降至 10% 小聲</b>，廣播結束後<b>自動優雅升回正常音量</b>！</p>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            <div class="space-y-1.5">
-                                <label class="text-xs text-slate-500 font-semibold block">選擇前奏音效樣式：</label>
-                                <select id="setting-chime-style" onchange="changeChimeStyle()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium">
-                                    <option value="classic_4">🏢 百貨公司經典四音 (登~登~登~登~)</option>
-                                    <option value="standard">🔔 傳統簡約雙音 (叮咚~)</option>
-                                    <option value="westminster">⛪ 經典西敏寺鐘聲</option>
-                                    <option value="custom">📢 自訂上傳 MP3 / WAV 檔案</option>
-                                </select>
-                            </div>
+                        <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                            <input type="url" id="bgm-url-input" placeholder="貼上 GitHub 音樂網址，例: https://.../bgm.mp3" class="flex-grow border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono">
+                            <button id="btn-toggle-bgm" onclick="toggleBgmPlay()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-xl transition text-xs flex items-center justify-center gap-1.5 shrink-0 shadow-sm">
+                                <i id="icon-bgm-btn" class="fa-solid fa-play"></i> <span id="text-bgm-btn">播放背景音樂</span>
+                            </button>
+                        </div>
+
+                        <div id="bgm-volume-zone" class="flex items-center space-x-3 text-xs text-slate-600 pt-1">
+                            <i class="fa-solid fa-volume-low text-indigo-500"></i>
+                            <span class="shrink-0 font-medium">背景音樂音量: <span id="bgm-val-text" class="font-bold text-indigo-700">70%</span></span>
+                            <input type="range" id="bgm-vol-slider" min="0" max="1" step="0.05" value="0.7" oninput="changeBgmVolume()" class="flex-grow accent-indigo-600">
+                            <i class="fa-solid fa-volume-high text-indigo-500"></i>
+                        </div>
+
+                        <!-- 隱藏式 HTML5 背景音樂音訊元件 -->
+                        <audio id="bgm-audio-player" loop class="hidden"></audio>
+                    </div>
+
+                    <div class="border-t border-slate-100 pt-6 text-left space-y-6">
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
+                                <i class="fa-solid fa-music text-indigo-600"></i>
+                                <span>🎵 廣播前奏與結束音效設定</span>
+                            </h3>
                             
-                            <div id="custom-chime-zone" class="hidden space-y-1.5">
-                                <label class="text-xs text-slate-500 font-semibold block">上傳您的自訂音效：</label>
-                                <input type="file" id="file-custom-chime" accept="audio/*" onchange="uploadCustomChime(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                                <p id="custom-chime-status" class="text-[10px] text-slate-400">目前尚無上傳檔案。</p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1.5">
+                                    <label class="text-xs text-slate-500 font-semibold block">選擇前奏音效樣式：</label>
+                                    <select id="setting-chime-style" onchange="changeChimeStyle()" class="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium">
+                                        <option value="classic_4">🏢 百貨公司經典四音 (登~登~登~登~)</option>
+                                        <option value="standard">🔔 傳統簡約雙音 (叮咚~)</option>
+                                        <option value="westminster">⛪ 經典西敏寺鐘聲</option>
+                                        <option value="custom">📢 自訂上傳 MP3 / WAV 檔案</option>
+                                    </select>
+                                </div>
+                                
+                                <div id="custom-chime-zone" class="hidden space-y-1.5">
+                                    <label class="text-xs text-slate-500 font-semibold block">上傳您的自訂音效：</label>
+                                    <input type="file" id="file-custom-chime" accept="audio/*" onchange="uploadCustomChime(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                                    <p id="custom-chime-status" class="text-[10px] text-slate-400">目前尚無上傳檔案。</p>
+                                </div>
                             </div>
                         </div>
 
-                        <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
-                            <i class="fa-solid fa-sliders text-indigo-600"></i>
-                            <span>📻 播報語音設定</span>
-                        </h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            <div class="space-y-1.5">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">播音速度: <span id="val-rate">1.0</span></span>
+                        <div>
+                            <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
+                                <i class="fa-solid fa-sliders text-indigo-600"></i>
+                                <span>📻 播報語音設定</span>
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">播音速度: <span id="val-rate">1.0</span></span>
+                                    </div>
+                                    <input type="range" id="setting-rate" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
                                 </div>
-                                <input type="range" id="setting-rate" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
-                            </div>
-                            <div class="space-y-1.5">
-                                <div class="flex justify-between">
-                                    <span class="text-slate-500">音調高低: <span id="val-pitch">1.0</span></span>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between">
+                                        <span class="text-slate-500">音調高低: <span id="val-pitch">1.0</span></span>
+                                    </div>
+                                    <input type="range" id="setting-pitch" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
                                 </div>
-                                <input type="range" id="setting-pitch" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
-                            </div>
-                            <div class="md:col-span-2 space-y-1.5">
-                                <label class="text-slate-500 block font-semibold flex items-center gap-1.5">
-                                    <span>偏好語音引擎:</span>
-                                </label>
-                                <select id="setting-voice" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                    <option value="">搜尋中...</option>
-                                </select>
+                                <div class="md:col-span-2 space-y-1.5">
+                                    <label class="text-slate-500 block font-semibold flex items-center gap-1.5">
+                                        <span>偏好語音引擎:</span>
+                                    </label>
+                                    <select id="setting-voice" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                        <option value="">搜尋中...</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -598,7 +631,10 @@
             editingSchedId: null,
             selectedStaff: [],
             selectedLocation: '',
-            selectedTemplate: ''
+            selectedTemplate: '',
+            isBgmPlaying: false,
+            originalBgmVolume: 0.7,
+            bgmFadeInterval: null
         };
 
         window.dbOps = {
@@ -825,6 +861,85 @@
                 blackout.classList.add('hidden');
                 if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
             }
+        }
+
+        // =====================================================================
+        // 🎵 全新：BGM 背景音樂播放與全自動優雅壓音 (Audio Ducking)
+        // =====================================================================
+        function toggleBgmPlay() {
+            const player = document.getElementById('bgm-audio-player');
+            const urlInput = document.getElementById('bgm-url-input');
+            const btnText = document.getElementById('text-bgm-btn');
+            const icon = document.getElementById('icon-bgm-btn');
+
+            if (!window.appState.isBgmPlaying) {
+                const url = normalizeAudioUrl(urlInput.value.trim());
+                if (!url) return showToast("請先輸入音樂檔網址！", "warning");
+
+                player.src = url;
+                const vol = parseFloat(document.getElementById('bgm-vol-slider').value);
+                player.volume = vol;
+                window.appState.originalBgmVolume = vol;
+
+                player.play().then(() => {
+                    window.appState.isBgmPlaying = true;
+                    btnText.innerText = "暫停背景音樂";
+                    icon.className = "fa-solid fa-pause";
+                    showToast("背景音樂開始播放", "success");
+                }).catch(() => {
+                    showToast("無法播放背景音樂，請檢查網址", "error");
+                });
+            } else {
+                player.pause();
+                window.appState.isBgmPlaying = false;
+                btnText.innerText = "播放背景音樂";
+                icon.className = "fa-solid fa-play";
+                showToast("背景音樂已暫停", "info");
+            }
+        }
+
+        function changeBgmVolume() {
+            const vol = parseFloat(document.getElementById('bgm-vol-slider').value);
+            document.getElementById('bgm-val-text').innerText = `${Math.round(vol * 100)}%`;
+            window.appState.originalBgmVolume = vol;
+            const player = document.getElementById('bgm-audio-player');
+            if (player) player.volume = vol;
+        }
+
+        // 📉 自動優雅壓低背景音樂音量 (Fade Down to 10%)
+        function duckBgmVolume() {
+            const player = document.getElementById('bgm-audio-player');
+            if (!player || !window.appState.isBgmPlaying || player.paused) return;
+
+            clearInterval(window.appState.bgmFadeInterval);
+            const targetVol = window.appState.originalBgmVolume * 0.1; // 壓低至 10%
+            
+            window.appState.bgmFadeInterval = setInterval(() => {
+                if (player.volume > targetVol + 0.05) {
+                    player.volume -= 0.05;
+                } else {
+                    player.volume = targetVol;
+                    clearInterval(window.appState.bgmFadeInterval);
+                }
+            }, 30);
+        }
+
+        // 📈 廣播完畢：自動優雅還原背景音樂音量 (Fade Up)
+        function restoreBgmVolume() {
+            const player = document.getElementById('bgm-audio-player');
+            if (!player || !window.appState.isBgmPlaying || player.paused) return;
+
+            clearInterval(window.appState.bgmFadeInterval);
+            const targetVol = window.appState.originalBgmVolume;
+
+            window.appState.bgmFadeInterval = setInterval(() => {
+                if (player.volume < targetVol - 0.05) {
+                    player.volume += 0.05;
+                } else {
+                    player.volume = targetVol;
+                    clearInterval(window.appState.bgmFadeInterval);
+                }
+            }, 50);
         }
 
         function renderUIPanels() {
@@ -1319,8 +1434,14 @@
                 if (speakerStateSub) speakerStateSub.innerText = "正在播報...";
             }
 
+            // 📉 廣播開始：全自動漸變壓低背景音樂音量
+            duckBgmVolume();
+
             await playChimeSound();
-            if (typeof window.speechSynthesis === 'undefined') return;
+            if (typeof window.speechSynthesis === 'undefined') {
+                restoreBgmVolume();
+                return;
+            }
 
             window.speechSynthesis.cancel(); 
             const speechText = text.replace(/[~～]/g, '，');
@@ -1348,6 +1469,7 @@
                     window.activeUtterance = null;
                     visualizer.classList.add('hidden');
                     if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                    restoreBgmVolume();
                 }
             }, 25000);
 
@@ -1359,6 +1481,10 @@
                 setTimeout(async () => {
                     if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
                     await playEndingChimeSound();
+                    
+                    // 📈 廣播全數結束：自動淡入升回背景音樂音量
+                    restoreBgmVolume();
+
                     setTimeout(() => {
                         if (visualizer) {
                             visualizer.classList.add('hidden');
@@ -1371,6 +1497,7 @@
             utterance.onerror = () => {
                 clearTimeout(safetyTimeout);
                 window.activeUtterance = null;
+                restoreBgmVolume();
                 if (visualizer) {
                     visualizer.classList.add('hidden');
                     if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
@@ -1403,6 +1530,9 @@
                 if (speakerStateSub) speakerStateSub.innerText = "正在播放定時音樂...";
             }
 
+            // 📉 定時廣播音樂開始：自動壓低背景音樂
+            duckBgmVolume();
+
             try {
                 initAudioContext();
                 const driveMatch = dataUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || dataUrl.match(/id=([a-zA-Z0-9_-]+)/);
@@ -1418,6 +1548,7 @@
                 function tryPlayNextUrl() {
                     if (currentTryIndex >= urlsToTry.length) {
                         showToast("定時音檔播放失敗，請確認網址", "error");
+                        restoreBgmVolume();
                         if (visualizer) {
                             visualizer.classList.add('hidden');
                             if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
@@ -1427,6 +1558,8 @@
                     const audio = new Audio(urlsToTry[currentTryIndex++]);
                     audio.onended = () => {
                         if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
+                        // 📈 音檔播完：還原背景音樂
+                        restoreBgmVolume();
                         setTimeout(() => {
                             if (visualizer) {
                                 visualizer.classList.add('hidden');
@@ -1440,6 +1573,7 @@
                 }
                 tryPlayNextUrl();
             } catch (e) {
+                restoreBgmVolume();
                 if (visualizer) visualizer.classList.add('hidden');
             }
         }
