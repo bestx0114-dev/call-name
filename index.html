@@ -7,13 +7,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- 引入 Excel 解析的核心套件 SheetJS -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
-        /* 自訂波形動畫 */
         .wave-bar {
             animation: bounce 1.2s ease-in-out infinite;
         }
@@ -29,7 +27,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- 模擬關螢幕 (待命省電防燒屏) 的全螢幕黑色遮罩 -->
     <div id="blackout-screen" onclick="toggleBlackout(false)" class="fixed inset-0 bg-black z-[100] hidden flex flex-col items-center justify-center text-slate-700 select-none cursor-pointer">
         <div class="text-center space-y-4 animate-pulse">
             <i class="fa-solid fa-moon text-6xl text-slate-800"></i>
@@ -38,7 +35,6 @@
         </div>
     </div>
 
-    <!-- 雲端診斷除錯提示彈窗 -->
     <div id="debug-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-red-100 space-y-4">
             <div class="flex items-center space-x-3 text-red-600">
@@ -86,7 +82,6 @@
                 </div>
             </div>
             
-            <!-- 雲端同步狀態指示器 -->
             <div class="flex items-center space-x-3 bg-black/20 px-3 py-1.5 rounded-full text-xs">
                 <span id="cloud-status-dot" class="h-2 w-2 rounded-full bg-yellow-400 animate-pulse"></span>
                 <span id="cloud-status-text">正在連接雲端資料庫...</span>
@@ -94,34 +89,34 @@
             </div>
         </div>
         
-        <!-- 頁籤導覽列 -->
         <div class="bg-indigo-900/40">
-            <div class="max-w-7xl mx-auto px-4 flex">
-                <button onclick="switchTab('broadcaster')" id="tab-broadcaster" class="flex items-center space-x-2 px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm">
+            <div class="max-w-7xl mx-auto px-4 flex flex-wrap">
+                <button onclick="switchTab('broadcaster')" id="tab-broadcaster" class="flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm">
                     <i class="fa-solid fa-microphone"></i>
                     <span>🔊 廣播主控台</span>
                 </button>
-                <button onclick="switchTab('speaker')" id="tab-speaker" class="flex items-center space-x-2 px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm">
+                <button onclick="switchTab('inspection')" id="tab-inspection" class="flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm">
+                    <i class="fa-solid fa-boxes-packing text-amber-300"></i>
+                    <span>📦 驗貨桌叫人</span>
+                </button>
+                <button onclick="switchTab('speaker')" id="tab-speaker" class="flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm">
                     <i class="fa-solid fa-volume-high"></i>
                     <span>📻 喇叭接收端</span>
                 </button>
-                <button onclick="switchTab('settings')" id="tab-settings" class="flex items-center space-x-2 px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm">
+                <button onclick="switchTab('settings')" id="tab-settings" class="flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm">
                     <i class="fa-solid fa-gear"></i>
-                    <span>⚙️ 系統設定</span>
+                    <span>⚙️ 系統與排程設定</span>
                 </button>
             </div>
         </div>
     </header>
 
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
-        <!-- 核心提示訊息元件 -->
         <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
 
-        <!-- 廣播主控台 -->
         <section id="panel-broadcaster" class="space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                <!-- 快捷建立廣播區域 (8格) -->
                 <div class="lg:col-span-8 space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6">
                         <div class="flex justify-between items-center mb-4">
@@ -134,34 +129,25 @@
                             </button>
                         </div>
                         
-                        <!-- 步驟1：選擇員工 (支援多選) -->
                         <div class="mb-5">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇人員 (可選多人 / 支援搜尋)</label>
                                 <input type="text" id="search-staff" oninput="filterStaff()" placeholder="搜尋名字..." class="text-xs border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
-                            <div id="staff-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
-                                <!-- 動態載入員工按鈕 -->
-                            </div>
+                            <div id="staff-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100"></div>
                         </div>
 
-                        <!-- 步驟2：選擇處所 (可選填) -->
                         <div class="mb-5">
                             <div class="flex justify-between items-center mb-2">
                                 <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">選擇目的地/處所 (再點一次可取消選取，變為無地點廣播)</label>
                                 <input type="text" id="search-location" oninput="filterLocations()" placeholder="搜尋處所..." class="text-xs border border-slate-200 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                             </div>
-                            <div id="location-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100">
-                                <!-- 動態載入處所按鈕 -->
-                            </div>
+                            <div id="location-grid" class="flex flex-wrap gap-2 max-h-36 overflow-y-auto p-1 bg-slate-50 rounded-xl border border-slate-100"></div>
                         </div>
 
-                        <!-- 步驟3：選擇語句情境 -->
                         <div class="mb-6">
                             <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">選擇廣播語句範本</label>
-                            <div id="template-list" class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <!-- 動態載入情境範本 -->
-                            </div>
+                            <div id="template-list" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
                         </div>
 
                         <div class="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100/50">
@@ -185,7 +171,6 @@
                     </div>
                 </div>
 
-                <!-- 歷史記錄側邊欄 -->
                 <div class="lg:col-span-4 space-y-6">
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col h-[520px]">
                         <div class="flex justify-between items-center mb-4">
@@ -193,11 +178,12 @@
                                 <i class="fa-solid fa-clock-rotate-left text-indigo-500"></i>
                                 <span>今日發送紀錄</span>
                             </h2>
-                            <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-700">清除</button>
+                            <button onclick="clearHistory()" class="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 font-semibold">
+                                <i class="fa-solid fa-trash-can"></i> 清除歷史紀錄
+                            </button>
                         </div>
                         
                         <div id="history-container" class="flex-grow overflow-y-auto space-y-3 pr-1">
-                            <!-- 歷史紀錄項目 -->
                             <div class="text-center py-12 text-slate-400 text-sm">
                                 <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300 block"></i>
                                 暫無廣播歷史
@@ -208,11 +194,58 @@
             </div>
         </section>
 
-        <!-- 喇叭接收端 -->
+        <section id="panel-inspection" class="hidden max-w-5xl mx-auto space-y-6">
+            <div class="bg-white rounded-3xl shadow-sm border border-amber-100 p-6 md:p-8 space-y-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-amber-50 text-amber-600 p-3 rounded-2xl border border-amber-200">
+                            <i class="fa-solid fa-boxes-packing text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                <span>📦 驗貨桌專用快捷呼叫台</span>
+                            </h2>
+                            <p class="text-xs text-slate-500 mt-1">點擊下方任何同仁姓名，系統將<b>立即發送廣播</b>：「[姓名]，請到驗貨桌～[姓名]，請到驗貨桌～」</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 bg-amber-50 px-3.5 py-1.5 rounded-full border border-amber-200 shrink-0">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        <span class="text-xs font-bold text-amber-800">一鍵秒速叫人</span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-hand-pointer text-amber-500"></i>
+                            <span>點擊姓名立刻廣播叫人：</span>
+                        </label>
+                        <input type="text" id="search-inspection-staff" oninput="filterInspectionStaff()" placeholder="快速搜尋..." class="text-xs border border-slate-200 rounded-lg px-3 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500 w-36 sm:w-48">
+                    </div>
+
+                    <div id="inspection-staff-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 p-2 bg-slate-50 rounded-2xl border border-slate-100 min-h-[160px] max-h-[480px] overflow-y-auto">
+                        <!-- 動態載入驗貨桌快捷按鈕 -->
+                    </div>
+                </div>
+
+                <div class="bg-amber-50/60 rounded-2xl p-4 border border-amber-200/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-amber-900">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-circle-info text-amber-600 text-lg shrink-0"></i>
+                        <span>💡 提示：點擊按鈕後將不需要再次確認，雲端音響端會立刻播報「<b>XXX，請到驗貨桌～XXX，請到驗貨桌～</b>」。</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section id="panel-speaker" class="hidden max-w-2xl mx-auto">
             <div class="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-indigo-800 to-indigo-900 text-white p-8 text-center relative">
-                    <!-- 動態背景波紋 -->
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0%,transparent_70%)]"></div>
                     
                     <div class="relative z-10 space-y-4">
@@ -221,13 +254,12 @@
                         </span>
                         <h2 class="text-2xl font-bold">📢 辦公室藍牙音響播放主機</h2>
                         <p class="text-sm text-indigo-200 max-w-md mx-auto">
-                            請將此裝置連接至公司的藍牙喇叭，並保持此網頁開啟。雲端一有新廣播，將會自動在此處播放！
+                            請將此裝置連接至公司的藍牙喇叭，並保持此網頁開啟。雲端廣播與定時排程將會自動在此處播放！
                         </p>
                     </div>
                 </div>
 
                 <div class="p-8 text-center space-y-8">
-                    <!-- 狀態切換按鈕 -->
                     <div id="speaker-activation-zone" class="py-6">
                         <button id="btn-activate-speaker" onclick="toggleSpeakerActivation()" class="mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/40 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100">
                             <i id="speaker-icon" class="fa-solid fa-power-off text-5xl"></i>
@@ -236,7 +268,6 @@
                         </button>
                     </div>
 
-                    <!-- 模擬關閉螢幕待機按鈕 (僅在監聽啟用時顯示) -->
                     <div id="blackout-btn-zone" class="hidden">
                         <button onclick="toggleBlackout(true)" class="mx-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition active:scale-95 flex items-center gap-2 shadow shadow-slate-900/20">
                             <i class="fa-solid fa-moon text-yellow-400"></i>
@@ -244,7 +275,6 @@
                         </button>
                     </div>
 
-                    <!-- 播報動態視覺化區塊 -->
                     <div id="playing-visualizer" class="hidden py-6 space-y-4">
                         <div class="flex items-end justify-center space-x-1.5 h-16">
                             <div class="wave-bar w-2 bg-indigo-500 rounded-full"></div>
@@ -259,7 +289,6 @@
                         </div>
                     </div>
 
-                    <!-- 🎵 前奏音效與語音設定區 -->
                     <div class="border-t border-slate-100 pt-6 text-left">
                         <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
                             <i class="fa-solid fa-music text-indigo-600"></i>
@@ -275,50 +304,46 @@
                                     <option value="westminster">⛪ 經典西敏寺鐘聲</option>
                                     <option value="custom">📢 自訂上傳 MP3 / WAV 檔案</option>
                                 </select>
-                                <p class="text-[10px] text-slate-400 mt-1">※ 結束提示音將自動搭配相同的風格（如百貨公司風格會播放高至低的「登~登~登~登~」）</p>
                             </div>
                             
                             <div id="custom-chime-zone" class="hidden space-y-1.5">
-                                <label class="text-xs text-slate-500 font-semibold block">上傳您的自訂音效 (自動永久儲存)：</label>
+                                <label class="text-xs text-slate-500 font-semibold block">上傳您的自訂音效：</label>
                                 <input type="file" id="file-custom-chime" accept="audio/*" onchange="uploadCustomChime(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
-                                <p id="custom-chime-status" class="text-[10px] text-slate-400">目前尚無上傳檔案，將自動播放經典四音。</p>
+                                <p id="custom-chime-status" class="text-[10px] text-slate-400">目前尚無上傳檔案。</p>
                             </div>
                         </div>
 
                         <h3 class="text-sm font-semibold text-slate-600 mb-4 flex items-center gap-1.5">
                             <i class="fa-solid fa-sliders text-indigo-600"></i>
-                            <span>📻 播報語音設定 (本機調整)</span>
+                            <span>📻 播報語音設定</span>
                         </h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
-                                    <span class="text-slate-500">播音速度 (Rate): <span id="val-rate">1.0</span></span>
+                                    <span class="text-slate-500">播音速度: <span id="val-rate">1.0</span></span>
                                 </div>
                                 <input type="range" id="setting-rate" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
                             </div>
                             <div class="space-y-1.5">
                                 <div class="flex justify-between">
-                                    <span class="text-slate-500">音調高低 (Pitch): <span id="val-pitch">1.0</span></span>
+                                    <span class="text-slate-500">音調高低: <span id="val-pitch">1.0</span></span>
                                 </div>
                                 <input type="range" id="setting-pitch" min="0.5" max="1.5" step="0.1" value="1.0" oninput="updateAudioSettingsDisplay()" class="w-full accent-indigo-600">
                             </div>
                             <div class="md:col-span-2 space-y-1.5">
                                 <label class="text-slate-500 block font-semibold flex items-center gap-1.5">
-                                    <span>偏好語音引擎 (Voice):</span>
-                                    <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full">優先排序最好聽的語音</span>
+                                    <span>偏好語音引擎:</span>
                                 </label>
                                 <select id="setting-voice" class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
-                                    <option value="">搜尋中，請稍候...</option>
+                                    <option value="">搜尋中...</option>
                                 </select>
-                                <p class="text-[10px] text-slate-400 mt-1">💡 推薦使用 <b>Microsoft Edge 瀏覽器</b>，可以取得地表最好聽的「Microsoft Online (Natural) 曉臻」真人等級 AI 語音！</p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 系統測試按鈕 -->
                     <div class="bg-slate-50 p-4 rounded-xl flex justify-between items-center text-xs text-slate-500">
-                        <span>💡 您可以隨時手動觸發測試音效與播報。</span>
+                        <span>💡 手動觸發測試播報：</span>
                         <button onclick="testSpeakerSystem()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold px-3 py-1.5 rounded-lg transition">
                             測試播音
                         </button>
@@ -327,11 +352,109 @@
             </div>
         </section>
 
-        <!-- 系統設定頁 -->
         <section id="panel-settings" class="hidden space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-clock text-indigo-600"></i>
+                        <span>⏰ 定時自動廣播排程</span>
+                    </h3>
+                    <span class="text-xs bg-indigo-50 text-indigo-700 font-semibold px-2.5 py-1 rounded-full">雲端永久同步</span>
+                </div>
+
+                <div class="bg-slate-50/80 rounded-2xl p-4 border border-slate-100 space-y-4 text-xs">
+                    <div class="font-bold text-slate-700 flex items-center gap-1.5 text-sm">
+                        <i class="fa-solid fa-plus-circle text-indigo-600"></i> <span id="form-sched-title">新增/編輯定時排程</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">排程名稱</label>
+                            <input type="text" id="sched-name" placeholder="例: 17:00 下班提醒" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">觸發時間 (HH:MM)</label>
+                            <input type="time" id="sched-time" value="17:00" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono font-bold text-indigo-700">
+                        </div>
+                        <div>
+                            <label class="block font-semibold text-slate-500 mb-1">廣播類型</label>
+                            <select id="sched-type" onchange="toggleSchedTypeInputs()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-medium">
+                                <option value="tts">📢 語音文字播報 (TTS)</option>
+                                <option value="audio">🎵 播放音樂 (上傳檔或貼上網址)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block font-semibold text-slate-500 mb-1.5">重複星期</label>
+                        <div class="flex flex-wrap gap-2 text-xs">
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="1" checked> <span>週一</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="2" checked> <span>週二</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="3" checked> <span>週三</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="4" checked> <span>週四</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="5" checked> <span>週五</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="6"> <span>週六</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1 bg-white px-2.5 py-1 rounded-lg border border-slate-200 cursor-pointer">
+                                <input type="checkbox" class="sched-day accent-indigo-600" value="0"> <span>週日</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="sched-tts-zone" class="space-y-1.5">
+                        <label class="block font-semibold text-slate-500 mb-1">廣播語音文字</label>
+                        <input type="text" id="sched-text" placeholder="例: 現在是下班時間，請同仁記得打卡～" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white">
+                    </div>
+
+                    <div id="sched-audio-zone" class="hidden space-y-3">
+                        <div class="flex items-center gap-4 text-xs font-semibold text-slate-600 border-b border-slate-200/60 pb-2">
+                            <label class="inline-flex items-center space-x-1.5 cursor-pointer">
+                                <input type="radio" name="audio-mode" value="file" checked onchange="toggleAudioModeInput()" class="accent-indigo-600">
+                                <span>📁 方法 A：上傳電腦/手機音檔 (最高 20MB)</span>
+                            </label>
+                            <label class="inline-flex items-center space-x-1.5 cursor-pointer">
+                                <input type="radio" name="audio-mode" value="url" onchange="toggleAudioModeInput()" class="accent-indigo-600">
+                                <span>🌐 方法 B：貼上 Google Drive / MP3 網址</span>
+                            </label>
+                        </div>
+
+                        <div id="audio-input-file-zone" class="space-y-1.5">
+                            <input type="file" id="sched-audio-file" accept="audio/*" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
+                            <p id="sched-audio-status" class="text-[10px] text-slate-400">尚未選擇檔案</p>
+                        </div>
+
+                        <div id="audio-input-url-zone" class="hidden space-y-1.5">
+                            <input type="url" id="sched-audio-url" placeholder="https://drive.google.com/file/d/.../view?usp=drive_link" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 pt-1">
+                        <button id="btn-save-sched" onclick="addSchedule()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                            <i id="icon-sched-btn" class="fa-solid fa-plus"></i> <span id="text-sched-btn">儲存並啟用排程</span>
+                        </button>
+                        <button id="btn-cancel-sched-edit" onclick="cancelSchedEdit()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-xl transition text-xs">
+                            取消編輯
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border border-slate-100 rounded-2xl overflow-hidden">
+                    <ul id="settings-schedule-list" class="divide-y divide-slate-100"></ul>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                <!-- 員工名冊管理 -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-center mb-4">
@@ -339,29 +462,23 @@
                                 <i class="fa-solid fa-users text-indigo-600"></i>
                                 <span>員工名單管理</span>
                             </h3>
-                            <!-- 批次匯入切換鈕 -->
                             <button onclick="toggleBulkPanel('staff')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
                                 <i class="fa-solid fa-file-import"></i> 批次/Excel匯入
                             </button>
                         </div>
                         
-                        <!-- 批次匯入摺疊區塊 -->
                         <div id="bulk-panel-staff" class="hidden mb-4 p-4 bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200 space-y-3">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">✍️ 方法 A：直接貼上名單 (一行一筆，或用逗號分開)</label>
                                 <textarea id="bulk-staff-text" rows="3" class="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="輸入範例:&#10;張美麗&#10;李大同&#10;陳小明, 林阿宏, 趙課長"></textarea>
                                 <button onclick="importStaffText()" class="mt-1 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow-sm">
                                     確認文字匯入
                                 </button>
                             </div>
                             <div class="border-t border-indigo-100 pt-2">
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">📊 方法 B：上傳 Excel / CSV 檔案</label>
                                 <input type="file" id="file-staff-excel" accept=".xlsx, .xls, .csv" onchange="importStaffExcel(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
-                                <p class="text-[9px] text-slate-400 mt-1">💡 系統會自動解析 Excel 試算表之 **第一欄 (Column A)** 當作名字。</p>
                             </div>
                         </div>
 
-                        <!-- 單筆手動新增 -->
                         <div class="flex gap-2 mb-4">
                             <input type="text" id="new-staff-name" placeholder="單筆手動新增姓名..." class="flex-grow border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             <button onclick="addNewStaff()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1">
@@ -370,15 +487,11 @@
                         </div>
                     </div>
 
-                    <!-- 員工名冊列表 -->
                     <div class="border border-slate-100 rounded-xl max-h-80 overflow-y-auto">
-                        <ul id="settings-staff-list" class="divide-y divide-slate-100">
-                            <!-- 動態載入員工列表 -->
-                        </ul>
+                        <ul id="settings-staff-list" class="divide-y divide-slate-100"></ul>
                     </div>
                 </div>
 
-                <!-- 處所/地點管理 -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 flex flex-col justify-between">
                     <div>
                         <div class="flex justify-between items-center mb-4">
@@ -386,54 +499,42 @@
                                 <i class="fa-solid fa-building text-indigo-600"></i>
                                 <span>辦公處所管理</span>
                             </h3>
-                            <!-- 批次匯入切換鈕 -->
                             <button onclick="toggleBulkPanel('location')" class="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
                                 <i class="fa-solid fa-file-import"></i> 批次/Excel匯入
                             </button>
                         </div>
 
-                        <!-- 批次匯入摺疊區塊 -->
                         <div id="bulk-panel-location" class="hidden mb-4 p-4 bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200 space-y-3">
                             <div>
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">✍️ 方法 A：直接貼上處所 (一行一筆，或用逗號分開)</label>
-                                <textarea id="bulk-location-text" rows="3" class="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="輸入範例:&#10;生產部一廠&#10;工程部辦公室&#10;A棟會議室, 總務組, 大門警衛室"></textarea>
+                                <textarea id="bulk-location-text" rows="3" class="w-full text-xs border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-indigo-500 focus:outline-none" placeholder="輸入範例:&#10;生產部一廠&#10;工程部辦公室"></textarea>
                                 <button onclick="importLocationText()" class="mt-1 w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow-sm">
                                     確認文字匯入
                                 </button>
                             </div>
                             <div class="border-t border-indigo-100 pt-2">
-                                <label class="block text-[10px] font-bold text-slate-500 mb-1">📊 方法 B：上傳 Excel / CSV 檔案</label>
                                 <input type="file" id="file-location-excel" accept=".xlsx, .xls, .csv" onchange="importLocationExcel(event)" class="block w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer">
-                                <p class="text-[9px] text-slate-400 mt-1">💡 系統會自動解析 Excel 試算表之 **第一欄 (Column A)** 當作處所地點。</p>
                             </div>
                         </div>
                         
-                        <!-- 單筆手動新增 -->
                         <div class="flex gap-2 mb-4">
-                            <input type="text" id="new-location-name" placeholder="單筆手動新增處所/辦公室..." class="flex-grow border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <input type="text" id="new-location-name" placeholder="單筆手動新增處所..." class="flex-grow border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                             <button onclick="addNewLocation()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition flex items-center gap-1">
                                 <i class="fa-solid fa-plus"></i> 新增
                             </button>
                         </div>
                     </div>
 
-                    <!-- 處所列表 -->
                     <div class="border border-slate-100 rounded-xl max-h-80 overflow-y-auto">
-                        <ul id="settings-location-list" class="divide-y divide-slate-100">
-                            <!-- 動態載入處所列表 -->
-                        </ul>
+                        <ul id="settings-location-list" class="divide-y divide-slate-100"></ul>
                     </div>
                 </div>
 
-                <!-- 廣播語句範本管理 -->
                 <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 md:col-span-2">
                     <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center gap-2">
                         <i class="fa-solid fa-paragraph text-indigo-600"></i>
                         <span>廣播範本語句設定</span>
                     </h3>
-                    <p class="text-xs text-slate-500 mb-4">請使用 <code class="bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-mono font-bold">[姓名]</code> 與 <code class="bg-indigo-50 text-indigo-600 px-1 py-0.5 rounded font-mono font-bold">[地點]</code> 作為動態替換標籤。為了讓廣播更清晰，建議重疊複誦一遍。</p>
                     
-                    <!-- 新增範本表單 -->
                     <div class="flex flex-col sm:flex-row gap-2 mb-4">
                         <input type="text" id="new-template-text" placeholder="例: [姓名]，請到[地點]~[姓名]，請到[地點]~" class="flex-grow border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                         <button onclick="addNewTemplate()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2 rounded-xl text-sm transition flex items-center justify-center gap-1">
@@ -441,11 +542,8 @@
                         </button>
                     </div>
 
-                    <!-- 範本列表 -->
                     <div class="border border-slate-100 rounded-xl">
-                        <ul id="settings-template-list" class="divide-y divide-slate-100 max-h-60 overflow-y-auto">
-                            <!-- 動態載入範本列表 -->
-                        </ul>
+                        <ul id="settings-template-list" class="divide-y divide-slate-100 max-h-60 overflow-y-auto"></ul>
                     </div>
                 </div>
 
@@ -457,15 +555,11 @@
         <p>© 2026 SmartOffice Broadcast Inc. 全功能整合智慧廣播網頁版</p>
     </footer>
 
-    <!-- 核心 JS 邏輯模組 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, collection, onSnapshot, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // =====================================================================
-        // 🛠️ 自行部署設定區塊 (已幫您填寫專案金鑰)
-        // =====================================================================
         const USER_FIREBASE_CONFIG = {
             apiKey: "AIzaSyCDCIxvrTUesekzG44UcdN5f1rrxcHn4u8",
             authDomain: "smart-office-broadcast2.firebaseapp.com",
@@ -476,9 +570,7 @@
         };
         
         const USER_APP_ID = "smart-office-broadcast2"; 
-        // =====================================================================
 
-        // 全域狀態定義
         window.appState = {
             appId: typeof __app_id !== 'undefined' ? __app_id : (USER_APP_ID || 'smart-office-broadcast2'),
             db: null,
@@ -488,28 +580,24 @@
             sessionStartTime: Date.now(),
             processedBroadcasts: new Set(),
             wakeLock: null,            
-            // 系統預設名單 (若雲端無設定時初始化)
-            defaultStaff: ['王大同', '陳小華', '張志明', '李美玲', '林淑芬', '黃俊傑', '劉德華'],
-            defaultLocations: ['總經理室', '會議室A', '1F大廳櫃台', '2F研發部', 'B1倉庫', '會客室'],
+            defaultStaff: ['0101主任', '0102店長', '0103姝敏', '0124志弘', '0201JEFF', '0202傑宇'],
+            defaultLocations: ['辦公室', '驗貨桌', '口罩區'],
             defaultTemplates: [
                 '[姓名]，請到[地點]～[姓名]，請到[地點]～',
                 '[姓名]先生，[地點]有您的訪客～[姓名]先生，[地點]有您的訪客',
                 '[姓名]，[地點]有您的內線電話，請接聽～',
                 '請[姓名]立即至[地點]集合～請[姓名]立即至[地點]集合'
             ],
-            
-            // 記憶體中暫存名單
             staff: [],
             locations: [],
             templates: [],
-            
-            // 當前廣播選取器 (選取多位員工，改為陣列結構儲存)
+            schedules: [],
+            editingSchedId: null,
             selectedStaff: [],
             selectedLocation: '',
             selectedTemplate: ''
         };
 
-        // 安全地將 Firebase SDK 功能封裝並暴露給全域環境使用
         window.dbOps = {
             addBroadcast: async (appId, payload) => {
                 if (!window.appState.db) throw new Error("資料庫尚未連接，無法發送雲端廣播");
@@ -539,16 +627,11 @@
             const badge = document.getElementById('client-id-badge');
 
             try {
-                let firebaseConfig;
-
-                if (USER_FIREBASE_CONFIG) {
-                    firebaseConfig = USER_FIREBASE_CONFIG;
-                    window.appState.appId = USER_APP_ID || 'smart-office-broadcast2';
-                } else if (typeof __firebase_config !== 'undefined') {
+                let firebaseConfig = USER_FIREBASE_CONFIG;
+                if (!firebaseConfig && typeof __firebase_config !== 'undefined') {
                     firebaseConfig = JSON.parse(__firebase_config);
-                } else {
-                    throw new Error("無可用 Firebase 設定，改為單機模擬模式");
                 }
+                if (!firebaseConfig) throw new Error("無可用 Firebase 設定");
                 
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
@@ -558,32 +641,19 @@
                 window.appState.auth = auth;
 
                 let userCredential;
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        userCredential = await signInAnonymously(auth);
-                    }
-                } catch (authError) {
-                    console.error("Firebase Authentication 失敗:", authError);
-                    if (authError.code === 'auth/operation-not-allowed') {
-                        throw new Error("【未啟用驗證：auth/operation-not-allowed】\n請到 Firebase 控制台的左側選單，選擇 Authentication -> 點擊 Sign-in method 頁籤 -> 啟用「匿名 (Anonymous)」登入！这一步驟非常重要，一定要手動開啟！");
-                    } else if (authError.code === 'auth/network-request-failed') {
-                        throw new Error("【網路連線受阻】\n連線至 Firebase Auth 失敗。這通常是因為瀏覽器（如 Brave 或 Chrome 的 AdBlock 廣告阻擋插件）阻擋了驗證網址。請暫時將此網域加入白名單後重試。");
-                    } else {
-                        throw new Error(`【登入失敗：${authError.code}】\n${authError.message}`);
-                    }
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    userCredential = await signInAnonymously(auth);
                 }
 
                 window.appState.userId = userCredential.user.uid;
-                
                 statusDot.className = "h-2 w-2 rounded-full bg-emerald-500 animate-pulse";
                 statusText.innerText = "已連線雲端資料庫";
                 badge.innerText = `ID: ${window.appState.userId.substring(0, 8)}`;
                 badge.classList.remove('hidden');
 
                 setupRealtimeSync();
-
             } catch (error) {
                 console.warn("Firebase 初始化失敗:", error);
                 statusDot.className = "h-2 w-2 rounded-full bg-red-500";
@@ -598,51 +668,41 @@
             if (!db) return;
 
             const configDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'config', 'settings');
-            
             onSnapshot(configDocRef, (docSnapshot) => {
                 if (docSnapshot.exists()) {
                     const data = docSnapshot.data();
                     window.appState.staff = data.staff || window.appState.defaultStaff;
                     window.appState.locations = data.locations || window.appState.defaultLocations;
                     window.appState.templates = data.templates || window.appState.defaultTemplates;
+                    window.appState.schedules = data.schedules || [];
                 } else {
                     const initialConfig = {
                         staff: window.appState.defaultStaff,
                         locations: window.appState.defaultLocations,
-                        templates: window.appState.defaultTemplates
+                        templates: window.appState.defaultTemplates,
+                        schedules: []
                     };
-                    setDoc(configDocRef, initialConfig).catch(err => {
-                        console.error("資料庫寫入失敗:", err);
-                    });
-                    
+                    setDoc(configDocRef, initialConfig).catch(console.error);
                     window.appState.staff = initialConfig.staff;
                     window.appState.locations = initialConfig.locations;
                     window.appState.templates = initialConfig.templates;
+                    window.appState.schedules = [];
                 }
-                
                 renderUIPanels();
             }, (error) => {
-                console.error("設定資料流監聽失敗:", error);
-                showToast("同步名單設定失敗，已切換至本機快取", "error");
+                showToast("同步名單設定失敗，切換至本機快取", "error");
                 loadMockData();
             });
 
             const broadcastsColRef = collection(db, 'artifacts', appId, 'public', 'data', 'broadcasts');
-            
             onSnapshot(broadcastsColRef, (snapshot) => {
                 const broadcasts = [];
-                snapshot.forEach(doc => {
-                    broadcasts.push({ id: doc.id, ...doc.data() });
-                });
-
+                snapshot.forEach(doc => broadcasts.push({ id: doc.id, ...doc.data() }));
                 broadcasts.sort((a, b) => b.timestamp - a.timestamp);
                 renderHistory(broadcasts);
-
                 if (window.appState.isSpeakerActive) {
                     processIncomingBroadcasts(broadcasts);
                 }
-            }, (error) => {
-                console.error("廣播訊號流監聽失敗:", error);
             });
         }
 
@@ -650,10 +710,9 @@
             window.appState.staff = JSON.parse(localStorage.getItem('mock_staff')) || window.appState.defaultStaff;
             window.appState.locations = JSON.parse(localStorage.getItem('mock_locations')) || window.appState.defaultLocations;
             window.appState.templates = JSON.parse(localStorage.getItem('mock_templates')) || window.appState.defaultTemplates;
+            window.appState.schedules = JSON.parse(localStorage.getItem('mock_schedules')) || [];
             renderUIPanels();
-            
-            const mockHistory = JSON.parse(localStorage.getItem('mock_history')) || [];
-            renderHistory(mockHistory);
+            renderHistory(JSON.parse(localStorage.getItem('mock_history')) || []);
         }
 
         window.addEventListener('load', () => {
@@ -664,13 +723,14 @@
                     window.speechSynthesis.onvoiceschanged = populateVoiceList;
                 }
             }
+            startScheduleChecker();
         });
     </script>
 
-    <!-- 輔助與音效 JS 邏輯模組 -->
     <script>
         let customChimeBuffer = null;
         let indexedDBInstance = null;
+        let schedAudioBase64 = null;
 
         const dbRequest = indexedDB.open("SmartOfficeAudioDB", 1);
         dbRequest.onupgradeneeded = function(e) {
@@ -683,53 +743,36 @@
             indexedDBInstance = e.target.result;
             loadStoredCustomChime();
         };
-        dbRequest.onerror = function() {
-            console.error("無法開啟本地音效資料庫(IndexedDB)");
-        };
 
         function loadStoredCustomChime() {
             if (!indexedDBInstance) return;
             const tx = indexedDBInstance.transaction(["audioStore"], "readonly");
-            const store = tx.objectStore("audioStore");
-            const getReq = store.get("customChime");
-
+            const getReq = tx.objectStore("audioStore").get("customChime");
             getReq.onsuccess = function() {
-                if (getReq.result) {
-                    decodeAndPrepareAudio(getReq.result);
-                }
+                if (getReq.result) decodeAndPrepareAudio(getReq.result);
             };
         }
 
         function decodeAndPrepareAudio(arrayBuffer) {
             initAudioContext();
-            const copy = arrayBuffer.slice(0); 
-            globalAudioCtx.decodeAudioData(copy, (decodedBuffer) => {
+            globalAudioCtx.decodeAudioData(arrayBuffer.slice(0), (decodedBuffer) => {
                 customChimeBuffer = decodedBuffer;
                 const statusEl = document.getElementById('custom-chime-status');
-                if (statusEl) {
-                    statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> 音效讀取成功 (${decodedBuffer.duration.toFixed(1)} 秒)</span>`;
-                }
-            }, (err) => {
-                console.error("音訊解碼失敗：", err);
-                showToast("音效解碼失敗，請確認上傳的是正確的音訊檔", "error");
+                if (statusEl) statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> 音效讀取成功 (${decodedBuffer.duration.toFixed(1)} 秒)</span>`;
             });
         }
 
         function uploadCustomChime(event) {
             const file = event.target.files[0];
             if (!file) return;
-
-            showToast("正在上傳並解碼音效...", "info");
             const reader = new FileReader();
             reader.onload = function(e) {
                 const arrayBuffer = e.target.result;
                 const tx = indexedDBInstance.transaction(["audioStore"], "readwrite");
-                const store = tx.objectStore("audioStore");
-                store.put(arrayBuffer, "customChime");
-
+                tx.objectStore("audioStore").put(arrayBuffer, "customChime");
                 tx.oncomplete = function() {
                     decodeAndPrepareAudio(arrayBuffer);
-                    showToast("前奏音效上傳成功並已本地儲存！", "success");
+                    showToast("前奏音效上傳成功並儲存！", "success");
                 };
             };
             reader.readAsArrayBuffer(file);
@@ -738,61 +781,28 @@
         function changeChimeStyle() {
             const style = document.getElementById('setting-chime-style').value;
             const customZone = document.getElementById('custom-chime-zone');
-            if (style === 'custom') {
-                customZone.classList.remove('hidden');
-            } else {
-                customZone.classList.add('hidden');
-            }
+            if (customZone) customZone.classList.toggle('hidden', style !== 'custom');
             localStorage.setItem('preferred_chime_style', style);
         }
 
-        window.addEventListener('load', () => {
-            const savedStyle = localStorage.getItem('preferred_chime_style') || 'classic_4';
-            const selectEl = document.getElementById('setting-chime-style');
-            if (selectEl) {
-                selectEl.value = savedStyle;
-                changeChimeStyle();
-            }
-        });
-
-        function showFirebaseDebugModal(msg) {
-            const modal = document.getElementById('debug-modal');
-            const msgEl = document.getElementById('debug-error-msg');
-            if (modal && msgEl) {
-                msgEl.innerText = msg;
-                modal.classList.remove('hidden');
-            }
-        }
-
         let globalAudioCtx = null;
-
-        // 💡 修正 iPhone 背景 YouTube Music 被切斷的 Bug：
-        // 移除原有的 navigator.audioSession.type = 'playback' 強制鎖定宣告。
-        // 當此宣告移除後，網頁會以 Ambient 共享模式與系統音訊混合，藍牙公司主機播歌時就不會被強行砍掉 YouTube Music！
         function initAudioContext() {
             if (!globalAudioCtx) {
                 globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (globalAudioCtx.state === 'suspended') {
-                globalAudioCtx.resume();
-            }
+            if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
         }
 
         function closeDebugModal() {
             const modal = document.getElementById('debug-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
+            if (modal) modal.classList.add('hidden');
         }
 
         async function requestWakeLock() {
             if ('wakeLock' in navigator) {
                 try {
                     window.appState.wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('🔒 Wake Lock 螢幕防休眠成功啟動！');
-                } catch (err) {
-                    console.warn(`🔒 Wake Lock 啟動失敗: ${err.name}`);
-                }
+                } catch (err) {}
             }
         }
 
@@ -803,130 +813,146 @@
             }
         }
 
-        document.addEventListener('visibilitychange', async () => {
-            if (window.appState.wakeLock !== null && document.visibilityState === 'visible') {
-                await requestWakeLock();
-            }
-        });
-
         function toggleBlackout(show) {
             const blackout = document.getElementById('blackout-screen');
             if (show) {
                 blackout.classList.remove('hidden');
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen().catch(() => {});
-                }
+                if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
             } else {
                 blackout.classList.add('hidden');
-                if (document.exitFullscreen && document.fullscreenElement) {
-                    document.exitFullscreen().catch(() => {});
-                }
+                if (document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
             }
         }
 
         function renderUIPanels() {
             renderStaffGrid();
+            renderInspectionStaffGrid();
             renderLocationGrid();
             renderTemplateList();
             renderSettingsPanel();
         }
 
-        function toggleBulkPanel(type) {
-            const panel = document.getElementById(`bulk-panel-${type}`);
-            if (panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-            } else {
-                panel.classList.add('hidden');
-            }
-        }
+        // 📦 全新：渲染驗貨桌專用一鍵呼叫按鈕網格
+        function renderInspectionStaffGrid() {
+            const grid = document.getElementById('inspection-staff-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
 
-        function importStaffText() {
-            const textarea = document.getElementById('bulk-staff-text');
-            const rawText = textarea.value.trim();
-            if (!rawText) {
-                showToast("請輸入欲匯入的姓名！", "warning");
+            const staffList = window.appState.staff || [];
+            if (staffList.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-6 text-slate-400 text-xs">目前尚無人員，請至「系統與排程設定」新增名單</div>`;
                 return;
             }
 
+            staffList.forEach(name => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'flex flex-col items-center justify-center p-3 rounded-xl bg-white hover:bg-amber-500 hover:text-white border border-slate-200 hover:border-amber-500 shadow-sm active:scale-95 transition-all text-slate-700 font-bold group relative overflow-hidden';
+                btn.innerHTML = `
+                    <i class="fa-solid fa-bullhorn text-amber-500 group-hover:text-white text-lg mb-1 transition"></i>
+                    <span class="text-xs truncate w-full text-center">${name}</span>
+                    <span class="text-[9px] text-slate-400 group-hover:text-amber-100 font-normal mt-0.5">叫至驗貨桌</span>
+                `;
+                btn.onclick = () => quickCallToInspection(name);
+                grid.appendChild(btn);
+            });
+        }
+
+        // ⚡ 驗貨桌專用一鍵呼叫發送邏輯
+        async function quickCallToInspection(name) {
+            const text = `${name}，請到驗貨桌～${name}，請到驗貨桌～`;
+            const payload = {
+                text: text,
+                timestamp: Date.now(),
+                sender: window.appState.userId || 'local-client',
+                name: name,
+                location: '驗貨桌'
+            };
+
+            const db = window.appState.db;
+            if (db && window.dbOps) {
+                try {
+                    const { appId } = window.appState;
+                    await window.dbOps.addBroadcast(appId, payload);
+                    showToast(`📢 已呼叫「${name}」前往驗貨桌！`, "success");
+                } catch (error) {
+                    saveToMockHistory(payload);
+                    showToast(`📢 離線發送：「${name}」至驗貨桌`, "success");
+                }
+            } else {
+                saveToMockHistory(payload);
+                showToast(`📢 模擬呼叫：「${name}」至驗貨桌`, "success");
+                if (window.appState.isSpeakerActive) {
+                    speakText(text);
+                }
+            }
+        }
+
+        function filterInspectionStaff() {
+            const query = document.getElementById('search-inspection-staff').value.toLowerCase();
+            const btns = document.querySelectorAll('#inspection-staff-grid button');
+            btns.forEach(btn => {
+                const name = btn.innerText.toLowerCase();
+                btn.classList.toggle('hidden', !name.includes(query));
+            });
+        }
+
+        function toggleBulkPanel(type) {
+            const panel = document.getElementById(`bulk-panel-${type}`);
+            if (panel) panel.classList.toggle('hidden');
+        }
+
+        function importStaffText() {
+            const rawText = document.getElementById('bulk-staff-text').value.trim();
+            if (!rawText) return showToast("請輸入欲匯入的姓名！", "warning");
             const names = rawText.split(/[\n,，、\s]+/).map(n => n.trim()).filter(n => n.length > 0);
             const existing = window.appState.staff;
-            const added = [];
-            names.forEach(name => {
-                if (!existing.includes(name)) {
-                    existing.push(name);
-                    added.push(name);
-                }
-            });
-
+            const added = names.filter(n => !existing.includes(n));
             if (added.length > 0) {
+                existing.push(...added);
                 saveConfig();
                 showToast(`成功匯入 ${added.length} 位員工姓名！`, "success");
-                textarea.value = '';
+                document.getElementById('bulk-staff-text').value = '';
                 toggleBulkPanel('staff');
             } else {
-                showToast("匯入的姓名皆已存在於名單中", "info");
+                showToast("匯入的姓名皆已存在", "info");
             }
         }
 
         function importLocationText() {
-            const textarea = document.getElementById('bulk-location-text');
-            const rawText = textarea.value.trim();
-            if (!rawText) {
-                showToast("請輸入欲匯入的處所名稱！", "warning");
-                return;
-            }
-
+            const rawText = document.getElementById('bulk-location-text').value.trim();
+            if (!rawText) return showToast("請輸入處所名稱！", "warning");
             const locs = rawText.split(/[\n,，、\s]+/).map(l => l.trim()).filter(l => l.length > 0);
             const existing = window.appState.locations;
-            const added = [];
-            locs.forEach(loc => {
-                if (!existing.includes(loc)) {
-                    existing.push(loc);
-                    added.push(loc);
-                }
-            });
-
+            const added = locs.filter(l => !existing.includes(l));
             if (added.length > 0) {
+                existing.push(...added);
                 saveConfig();
                 showToast(`成功匯入 ${added.length} 個處所地點！`, "success");
-                textarea.value = '';
+                document.getElementById('bulk-location-text').value = '';
                 toggleBulkPanel('location');
             } else {
-                showToast("匯入的處所皆已存在於名單中", "info");
+                showToast("匯入的處所皆已存在", "info");
             }
         }
 
         function importStaffExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    const names = json
-                        .map(row => row[0])
-                        .filter(cell => cell !== undefined && cell !== null)
-                        .map(cell => String(cell).trim())
-                        .filter(name => name.length > 0 && name !== '姓名' && name !== 'Name' && name !== 'name');
-
+                    const names = json.map(r => r[0]).filter(c => c).map(c => String(c).trim()).filter(n => n && !['姓名','Name','name'].includes(n));
                     const existing = window.appState.staff;
-                    const added = [];
-                    names.forEach(name => {
-                        if (!existing.includes(name)) {
-                            existing.push(name);
-                            added.push(name);
-                        }
-                    });
-
+                    const added = names.filter(n => !existing.includes(n));
                     if (added.length > 0) {
+                        existing.push(...added);
                         saveConfig();
-                        showToast(`成功由 Excel 匯入 ${added.length} 筆員工姓名！`, "success");
+                        showToast(`成功匯入 ${added.length} 筆姓名！`, "success");
                         event.target.value = '';
                         toggleBulkPanel('staff');
                     }
@@ -940,34 +966,20 @@
         function importLocationExcel(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                    
-                    const locs = json
-                        .map(row => row[0])
-                        .filter(cell => cell !== undefined && cell !== null)
-                        .map(cell => String(cell).trim())
-                        .filter(loc => loc.length > 0 && loc !== '處所' && loc !== '地點' && loc !== 'Location' && loc !== 'location');
-
+                    const locs = json.map(r => r[0]).filter(c => c).map(c => String(c).trim()).filter(l => l && !['處所','地點','Location'].includes(l));
                     const existing = window.appState.locations;
-                    const added = [];
-                    locs.forEach(loc => {
-                        if (!existing.includes(loc)) {
-                            existing.push(loc);
-                            added.push(loc);
-                        }
-                    });
-
+                    const added = locs.filter(l => !existing.includes(l));
                     if (added.length > 0) {
+                        existing.push(...added);
                         saveConfig();
-                        showToast(`成功由 Excel 匯入 ${added.length} 筆處所地點！`, "success");
+                        showToast(`成功匯入 ${added.length} 筆處所！`, "success");
                         event.target.value = '';
                         toggleBulkPanel('location');
                     }
@@ -978,14 +990,14 @@
             reader.readAsArrayBuffer(file);
         }
 
-        // 💡 升級人員按鈕網格渲染：支援同時複選多個名單
         function renderStaffGrid() {
             const grid = document.getElementById('staff-grid');
+            if (!grid) return;
             grid.innerHTML = '';
-            
             window.appState.staff.forEach(name => {
                 const isSelected = window.appState.selectedStaff.includes(name);
                 const btn = document.createElement('button');
+                btn.type = 'button';
                 btn.className = `px-3.5 py-2 rounded-xl text-sm font-medium transition active:scale-95 ${
                     isSelected 
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20 ring-2 ring-indigo-400' 
@@ -999,37 +1011,26 @@
 
         function filterStaff() {
             const query = document.getElementById('search-staff').value.toLowerCase();
-            const btns = document.querySelectorAll('#staff-grid button');
-            btns.forEach(btn => {
-                const name = btn.innerText.toLowerCase();
-                if (name.includes(query)) {
-                    btn.classList.remove('hidden');
-                } else {
-                    btn.classList.add('hidden');
-                }
+            document.querySelectorAll('#staff-grid button').forEach(btn => {
+                btn.classList.toggle('hidden', !btn.innerText.toLowerCase().includes(query));
             });
         }
 
         function filterLocations() {
             const query = document.getElementById('search-location').value.toLowerCase();
-            const btns = document.querySelectorAll('#location-grid button');
-            btns.forEach(btn => {
-                const name = btn.innerText.toLowerCase();
-                if (name.includes(query)) {
-                    btn.classList.remove('hidden');
-                } else {
-                    btn.classList.add('hidden');
-                }
+            document.querySelectorAll('#location-grid button').forEach(btn => {
+                btn.classList.toggle('hidden', !btn.innerText.toLowerCase().includes(query));
             });
         }
 
         function renderLocationGrid() {
             const grid = document.getElementById('location-grid');
+            if (!grid) return;
             grid.innerHTML = '';
-            
             window.appState.locations.forEach(loc => {
                 const isSelected = window.appState.selectedLocation === loc;
                 const btn = document.createElement('button');
+                btn.type = 'button';
                 btn.className = `px-3.5 py-2 rounded-xl text-sm font-medium transition active:scale-95 ${
                     isSelected 
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' 
@@ -1043,25 +1044,20 @@
 
         function renderTemplateList() {
             const list = document.getElementById('template-list');
+            if (!list) return;
             list.innerHTML = '';
-            
             window.appState.templates.forEach(tpl => {
                 const isSelected = window.appState.selectedTemplate === tpl;
                 const staffPreview = window.appState.selectedStaff.length > 0 ? window.appState.selectedStaff.join('、') : '王小明';
-                const preview = tpl
-                    .replace(/\[姓名\]/g, staffPreview)
-                    .replace(/\[地點\]/g, window.appState.selectedLocation || '辦公室');
-
+                const preview = tpl.replace(/\[姓名\]/g, staffPreview).replace(/\[地點\]/g, window.appState.selectedLocation || '辦公室');
                 const btn = document.createElement('button');
+                btn.type = 'button';
                 btn.className = `p-3 rounded-xl border text-left transition text-xs font-medium relative overflow-hidden ${
                     isSelected 
                     ? 'bg-emerald-50/70 border-emerald-500 text-emerald-900 ring-1 ring-emerald-500' 
                     : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-600'
                 }`;
-                btn.innerHTML = `
-                    <div class="line-clamp-2 pr-4">${preview}</div>
-                    ${isSelected ? '<i class="fa-solid fa-circle-check text-emerald-600 absolute right-3 top-3 text-sm"></i>' : ''}
-                `;
+                btn.innerHTML = `<div class="line-clamp-2 pr-4">${preview}</div>${isSelected ? '<i class="fa-solid fa-circle-check text-emerald-600 absolute right-3 top-3 text-sm"></i>' : ''}`;
                 btn.onclick = () => selectTemplate(tpl);
                 list.appendChild(btn);
             });
@@ -1077,26 +1073,17 @@
             renderTemplateList();
         }
 
-        // 💡 更改人員選取邏輯：支援多選，點擊已選人員則取消選取
         function selectStaff(name) {
-            const index = window.appState.selectedStaff.indexOf(name);
-            if (index > -1) {
-                window.appState.selectedStaff.splice(index, 1);
-            } else {
-                window.appState.selectedStaff.push(name);
-            }
+            const idx = window.appState.selectedStaff.indexOf(name);
+            if (idx > -1) window.appState.selectedStaff.splice(idx, 1);
+            else window.appState.selectedStaff.push(name);
             renderStaffGrid();
             updatePreviewText();
-            renderTemplateList(); // 即時重整情境預覽
+            renderTemplateList();
         }
 
-        // 💡 更改地點選取邏輯：如果點擊已選的地點，則會取消它，實現無地點廣播
         function selectLocation(loc) {
-            if (window.appState.selectedLocation === loc) {
-                window.appState.selectedLocation = ''; 
-            } else {
-                window.appState.selectedLocation = loc;
-            }
+            window.appState.selectedLocation = window.appState.selectedLocation === loc ? '' : loc;
             renderLocationGrid();
             updatePreviewText();
             renderTemplateList();
@@ -1108,44 +1095,25 @@
             updatePreviewText();
         }
 
-        // 💡 智慧合成預覽稿：無地點時全自動修剪掉贅詞
         function updatePreviewText() {
             const staffArr = window.appState.selectedStaff;
             const staff = staffArr.length > 0 ? staffArr.join('、') : '[員工姓名]';
             const loc = window.appState.selectedLocation;
-            let tpl = window.appState.selectedTemplate;
-            
-            if (!tpl) {
-                tpl = "[姓名]，請到[地點]～[姓名]，請到[地點]～";
-            }
-            
+            let tpl = window.appState.selectedTemplate || "[姓名]，請到[地點]～[姓名]，請到[地點]～";
             let compiled = tpl.replace(/\[姓名\]/g, staff);
-            
             if (loc) {
                 compiled = compiled.replace(/\[地點\]/g, loc);
             } else {
-                // 如果沒有指定地點，智慧裁剪修剪掉範本內的「請到辦公室」、「至辦公室」等贅詞結構
-                compiled = compiled.replace(/請到\[地點\]/g, "")
-                                   .replace(/至\[地點\]/g, "")
-                                   .replace(/\[地點\]有您的/g, "有您的")
-                                   .replace(/\[地點\]/g, "");
-                                   
-                // 清理掉裁剪後可能連續殘留的逗號或波浪號標點
+                compiled = compiled.replace(/請到\[地點\]/g, "").replace(/至\[地點\]/g, "").replace(/\[地點\]有您的/g, "有您的").replace(/\[地點\]/g, "");
                 compiled = compiled.replace(/，，/g, "，").replace(/～～/g, "～").trim();
-                
-                if (compiled.startsWith('，') || compiled.startsWith('～')) {
-                    compiled = compiled.substring(1);
-                }
+                if (compiled.startsWith('，') || compiled.startsWith('～')) compiled = compiled.substring(1);
             }
             document.getElementById('broadcast-preview-text').value = compiled;
         }
 
         async function sendBroadcast() {
             const text = document.getElementById('broadcast-preview-text').value.trim();
-            if (!text) {
-                showToast("請先撰寫或點選生成的廣播內容！", "warning");
-                return;
-            }
+            if (!text) return showToast("請先撰寫或點選生成的廣播內容！", "warning");
 
             const payload = {
                 text: text,
@@ -1158,8 +1126,7 @@
             const db = window.appState.db;
             if (db && window.dbOps) {
                 try {
-                    const { appId } = window.appState;
-                    await window.dbOps.addBroadcast(appId, payload);
+                    await window.dbOps.addBroadcast(window.appState.appId, payload);
                     showToast("廣播已送上雲端！音響端將立刻播放", "success");
                     clearSelection();
                 } catch (error) {
@@ -1169,9 +1136,7 @@
                 saveToMockHistory(payload);
                 showToast("單機廣播模擬發送！", "success");
                 clearSelection();
-                if (window.appState.isSpeakerActive) {
-                    speakText(text);
-                }
+                if (window.appState.isSpeakerActive) speakText(text);
             }
         }
 
@@ -1185,12 +1150,9 @@
 
         function renderHistory(broadcasts) {
             const container = document.getElementById('history-container');
-            if (broadcasts.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-12 text-slate-400 text-sm">
-                        <i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300 block"></i>
-                        暫無廣播歷史
-                    </div>`;
+            if (!container) return;
+            if (!broadcasts || broadcasts.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm"><i class="fa-solid fa-receipt text-3xl mb-2 text-slate-300 block"></i>暫無廣播歷史</div>`;
                 return;
             }
 
@@ -1198,19 +1160,16 @@
             broadcasts.forEach(b => {
                 const date = new Date(b.timestamp);
                 const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
-                
                 const item = document.createElement('div');
                 item.className = "bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1.5 hover:border-indigo-200 transition relative group";
                 item.innerHTML = `
                     <div class="flex justify-between text-slate-400">
                         <span class="font-mono">${timeStr}</span>
-                        <span class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold">${b.location}</span>
+                        <span class="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded font-bold">${b.location || '無特定地點'}</span>
                     </div>
                     <p class="font-semibold text-slate-700 line-clamp-2">${b.text}</p>
                     <div class="flex justify-between items-center pt-1.5 border-t border-slate-100/50">
-                        <span class="text-slate-500 flex items-center gap-1">
-                            <i class="fa-solid fa-user text-[10px]"></i> ${b.name}
-                        </span>
+                        <span class="text-slate-500 flex items-center gap-1"><i class="fa-solid fa-user text-[10px]"></i> ${b.name || '系統廣播'}</span>
                         <button onclick="reBroadcast('${b.text.replace(/'/g, "\\'")}')" class="text-indigo-600 hover:text-indigo-800 font-bold opacity-0 group-hover:opacity-100 transition flex items-center gap-0.5">
                             <i class="fa-solid fa-rotate"></i> 重播
                         </button>
@@ -1234,22 +1193,18 @@
             if (!window.appState.isSpeakerActive) {
                 window.appState.isSpeakerActive = true;
                 window.appState.sessionStartTime = Date.now();
-                
                 initAudioContext();
-                
                 try {
-                    const dummyUtterance = new SpeechSynthesisUtterance(" ");
-                    dummyUtterance.volume = 0;
-                    dummyUtterance.rate = 10;
-                    window.speechSynthesis.speak(dummyUtterance);
+                    const dummy = new SpeechSynthesisUtterance(" ");
+                    dummy.volume = 0; dummy.rate = 10;
+                    window.speechSynthesis.speak(dummy);
                 } catch (e) {}
 
                 btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
                 icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
                 btnText.innerText = "監聽音響運作中...";
                 if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); 
-                showToast("喇盤播放模式已啟動！藍牙音響待命中", "success");
-                
+                showToast("喇叭播放模式已啟動！", "success");
                 requestWakeLock(); 
                 playChimeSound();
             } else {
@@ -1259,7 +1214,6 @@
                 btnText.innerText = "啟動監聽播放";
                 if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); 
                 showToast("監聽播放已關閉", "info");
-                
                 releaseWakeLock(); 
             }
         }
@@ -1270,7 +1224,6 @@
                     initAudioContext();
                     const ctx = globalAudioCtx;
                     const style = document.getElementById('setting-chime-style').value;
-
                     if (style === 'custom' && customChimeBuffer) {
                         const source = ctx.createBufferSource();
                         source.buffer = customChimeBuffer;
@@ -1279,9 +1232,7 @@
                         source.onended = () => resolve();
                         return;
                     }
-
                     const now = ctx.currentTime;
-
                     if (style === 'standard') {
                         playSingleSynthNote(554.37, now, 0.8);       
                         playSingleSynthNote(440.00, now + 0.25, 1.2); 
@@ -1299,9 +1250,7 @@
                         playSingleSynthNote(698.46, now + 0.9, 1.6);  
                         setTimeout(resolve, 2400);
                     }
-                } catch (e) {
-                    resolve();
-                }
+                } catch (e) { resolve(); }
             });
         }
 
@@ -1312,7 +1261,6 @@
                     const ctx = globalAudioCtx;
                     const style = document.getElementById('setting-chime-style').value;
                     const now = ctx.currentTime;
-
                     if (style === 'standard') {
                         playSingleSynthNote(440.00, now, 0.8);       
                         playSingleSynthNote(554.37, now + 0.25, 1.2); 
@@ -1330,39 +1278,19 @@
                         playSingleSynthNote(349.23, now + 0.9, 1.6);  
                         setTimeout(resolve, 2400);
                     }
-                } catch (e) {
-                    resolve();
-                }
+                } catch (e) { resolve(); }
             });
         }
 
         function playSingleSynthNote(frequency, startTime, duration) {
             const ctx = globalAudioCtx;
-            const oscElement = ctx.createOscillator();
-            const gainNode = ctx.createGain();
-            oscElement.type = 'sine';
-            oscElement.frequency.setValueAtTime(frequency, startTime);
-            
-            const subOsc = ctx.createOscillator();
-            const subGain = ctx.createGain();
-            subOsc.type = 'sine';
-            subOsc.frequency.setValueAtTime(frequency * 2, startTime); 
-
-            gainNode.gain.setValueAtTime(0.18, startTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-
-            subGain.gain.setValueAtTime(0.06, startTime);
-            subGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.5); 
-
-            oscElement.connect(gainNode);
-            subOsc.connect(subGain);
-            gainNode.connect(ctx.destination);
-            subGain.connect(ctx.destination);
-
-            oscElement.start(startTime);
-            oscElement.stop(startTime + duration);
-            subOsc.start(startTime);
-            subOsc.stop(startTime + duration);
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, startTime);
+            gain.gain.setValueAtTime(0.18, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(startTime); osc.stop(startTime + duration);
         }
 
         function processIncomingBroadcasts(broadcasts) {
@@ -1371,7 +1299,8 @@
             if (latest.timestamp > window.appState.sessionStartTime) {
                 if (!window.appState.processedBroadcasts.has(latest.id)) {
                     window.appState.processedBroadcasts.add(latest.id);
-                    speakText(latest.text);
+                    if (latest.type === 'audio' && latest.audioData) playDataUrlAudio(latest.audioData, latest.text);
+                    else speakText(latest.text);
                 }
             }
         }
@@ -1390,32 +1319,27 @@
             }
 
             await playChimeSound();
-
             if (typeof window.speechSynthesis === 'undefined') return;
 
             window.speechSynthesis.cancel(); 
-            
             const speechText = text.replace(/[~～]/g, '，');
             const utterance = new SpeechSynthesisUtterance(speechText);
-            
             utterance.lang = 'zh-TW';
             window.activeUtterance = utterance;
             
             const rateInput = document.getElementById('setting-rate');
             const pitchInput = document.getElementById('setting-pitch');
             const voiceSelect = document.getElementById('setting-voice');
-            
             if (rateInput) utterance.rate = parseFloat(rateInput.value);
             if (pitchInput) utterance.pitch = parseFloat(pitchInput.value);
             
             const voices = window.speechSynthesis.getVoices();
-
             if (voiceSelect && voiceSelect.value) {
-                const selectedVoice = voices.find(v => v.voiceURI === voiceSelect.value);
-                if (selectedVoice) utterance.voice = selectedVoice;
+                const sel = voices.find(v => v.voiceURI === voiceSelect.value);
+                if (sel) utterance.voice = sel;
             } else {
-                const bestVoice = getOptimalChineseVoice(voices);
-                if (bestVoice) utterance.voice = bestVoice;
+                const best = getOptimalChineseVoice(voices);
+                if (best) utterance.voice = best;
             }
 
             const safetyTimeout = setTimeout(() => {
@@ -1434,7 +1358,6 @@
                 setTimeout(async () => {
                     if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
                     await playEndingChimeSound();
-
                     setTimeout(() => {
                         if (visualizer) {
                             visualizer.classList.add('hidden');
@@ -1456,16 +1379,75 @@
             window.speechSynthesis.speak(utterance);
         }
 
+        function normalizeAudioUrl(url) {
+            if (!url) return '';
+            url = url.trim();
+            const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (driveMatch && driveMatch[1]) {
+                return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+            }
+            return url;
+        }
+
+        async function playDataUrlAudio(dataUrl, title) {
+            const activationZone = document.getElementById('btn-activate-speaker');
+            const visualizer = document.getElementById('playing-visualizer');
+            const playingText = document.getElementById('currently-playing-text');
+            const speakerStateSub = document.getElementById('speaker-state-sub');
+
+            if (visualizer) {
+                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
+                visualizer.classList.remove('hidden');
+                playingText.innerText = `🎵 播放音樂：${title || '定時音樂'}`;
+                if (speakerStateSub) speakerStateSub.innerText = "正在播放定時音樂...";
+            }
+
+            try {
+                initAudioContext();
+                const driveMatch = dataUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || dataUrl.match(/id=([a-zA-Z0-9_-]+)/);
+                const fileId = (driveMatch && driveMatch[1]) ? driveMatch[1] : null;
+
+                let urlsToTry = fileId ? [
+                    `https://lh3.googleusercontent.com/d/${fileId}`,
+                    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
+                    `https://docs.google.com/uc?export=download&id=${fileId}`
+                ] : [normalizeAudioUrl(dataUrl)];
+
+                let currentTryIndex = 0;
+                function tryPlayNextUrl() {
+                    if (currentTryIndex >= urlsToTry.length) {
+                        showToast("定時音檔播放失敗，請確認網址", "error");
+                        if (visualizer) {
+                            visualizer.classList.add('hidden');
+                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                        }
+                        return;
+                    }
+                    const audio = new Audio(urlsToTry[currentTryIndex++]);
+                    audio.onended = () => {
+                        if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
+                        setTimeout(() => {
+                            if (visualizer) {
+                                visualizer.classList.add('hidden');
+                                if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                            }
+                        }, 500);
+                    };
+                    audio.onerror = () => tryPlayNextUrl();
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) playPromise.catch(() => tryPlayNextUrl());
+                }
+                tryPlayNextUrl();
+            } catch (e) {
+                if (visualizer) visualizer.classList.add('hidden');
+            }
+        }
+
         function getOptimalChineseVoice(voices) {
             const priorityPatterns = [
-                /Microsoft.*Natural.*Chinese/i,
-                /Microsoft.*Online.*Taiwan/i,
-                /Microsoft.*HsiaoChen/i,
-                /Microsoft.*Yunxi/i,
-                /Mei-Ja/i,
-                /Siri/i,
-                /Google.*國語.*臺灣/i,
-                /Google.*Mandarin/i
+                /Microsoft.*Natural.*Chinese/i, /Microsoft.*Online.*Taiwan/i,
+                /Microsoft.*HsiaoChen/i, /Microsoft.*Yunxi/i, /Mei-Ja/i, /Siri/i,
+                /Google.*國語.*臺灣/i, /Google.*Mandarin/i
             ];
             for (const pattern of priorityPatterns) {
                 const found = voices.find(v => pattern.test(v.name) || pattern.test(v.lang));
@@ -1476,14 +1458,8 @@
 
         function previewAudioLocally() {
             const text = document.getElementById('broadcast-preview-text').value.trim();
-            if (!text) {
-                speakText("王大同，請到會議室。");
-                return;
-            }
-            speakText(text);
+            speakText(text || "王大同，請到會議室。");
         }
-
-        document.getElementById('setting-chime-style').addEventListener('change', changeChimeStyle);
 
         function testSpeakerSystem() {
             speakText("叮咚測試！系統運作正常，喇叭連線優良。");
@@ -1493,49 +1469,46 @@
             if (typeof speechSynthesis === 'undefined') return;
             const voiceSelect = document.getElementById('setting-voice');
             if (!voiceSelect) return;
-            
             const voices = window.speechSynthesis.getVoices();
             if (voices.length === 0) return;
 
             const selectedURI = voiceSelect.value;
             voiceSelect.innerHTML = '';
-            
-            const chineseVoices = voices.filter(voice => voice.lang.includes('zh') || voice.lang.includes('cmn'));
+            const chineseVoices = voices.filter(v => v.lang.includes('zh') || v.lang.includes('cmn'));
             if (chineseVoices.length === 0) return;
 
-            const highQualityVoices = [];
-            const standardVoices = [];
-
+            const highQuality = [];
+            const standard = [];
             chineseVoices.forEach(voice => {
-                const isNatural = voice.name.includes('Natural') || voice.name.includes('Online') || voice.name.includes('Mei-Ja') || voice.name.includes('Google');
-                if (isNatural) highQualityVoices.push(voice);
-                else standardVoices.push(voice);
+                if (voice.name.includes('Natural') || voice.name.includes('Online') || voice.name.includes('Mei-Ja') || voice.name.includes('Google')) {
+                    highQuality.push(voice);
+                } else standard.push(voice);
             });
 
-            if (highQualityVoices.length > 0) {
-                const optGroupHigh = document.createElement('optgroup');
-                optGroupHigh.label = "✨ 推薦：AI 類神經真人音質 (聽起來像真人)";
-                highQualityVoices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.value = voice.voiceURI;
-                    if (voice.voiceURI === selectedURI) option.selected = true;
-                    optGroupHigh.appendChild(option);
+            if (highQuality.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = "✨ 推薦：AI 類神經真人音質";
+                highQuality.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.textContent = `${v.name} (${v.lang})`;
+                    opt.value = v.voiceURI;
+                    if (v.voiceURI === selectedURI) opt.selected = true;
+                    group.appendChild(opt);
                 });
-                voiceSelect.appendChild(optGroupHigh);
+                voiceSelect.appendChild(group);
             }
 
-            if (standardVoices.length > 0) {
-                const optGroupStandard = document.createElement('optgroup');
-                optGroupStandard.label = "🤖 一般：傳統合成音質";
-                standardVoices.forEach(voice => {
-                    const option = document.createElement('option');
-                    option.textContent = `${voice.name} (${voice.lang})`;
-                    option.value = voice.voiceURI;
-                    if (voice.voiceURI === selectedURI) option.selected = true;
-                    optGroupStandard.appendChild(option);
+            if (standard.length > 0) {
+                const group = document.createElement('optgroup');
+                group.label = "🤖 一般：傳統合成音質";
+                standard.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.textContent = `${v.name} (${v.lang})`;
+                    opt.value = v.voiceURI;
+                    if (v.voiceURI === selectedURI) opt.selected = true;
+                    group.appendChild(opt);
                 });
-                voiceSelect.appendChild(optGroupStandard);
+                voiceSelect.appendChild(group);
             }
 
             if (!selectedURI) {
@@ -1549,10 +1522,260 @@
             document.getElementById('val-pitch').innerText = document.getElementById('setting-pitch').value;
         }
 
+        function toggleSchedTypeInputs() {
+            const type = document.getElementById('sched-type').value;
+            document.getElementById('sched-tts-zone').classList.toggle('hidden', type !== 'tts');
+            document.getElementById('sched-audio-zone').classList.toggle('hidden', type === 'tts');
+        }
+
+        function toggleAudioModeInput() {
+            const mode = document.querySelector('input[name="audio-mode"]:checked').value;
+            document.getElementById('audio-input-file-zone').classList.toggle('hidden', mode !== 'file');
+            document.getElementById('audio-input-url-zone').classList.toggle('hidden', mode === 'file');
+        }
+
+        async function compressAudioFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        const tempCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const audioBuffer = await tempCtx.decodeAudioData(e.target.result);
+                        const sampleRate = 22050;
+                        const duration = Math.min(audioBuffer.duration, 180);
+                        const offlineCtx = new OfflineAudioContext(1, duration * sampleRate, sampleRate);
+                        const source = offlineCtx.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(offlineCtx.destination);
+                        source.start(0);
+
+                        const renderedBuffer = await offlineCtx.startRendering();
+                        const pcmData = renderedBuffer.getChannelData(0);
+                        const wavBuffer = createWavBuffer(pcmData, sampleRate);
+                        const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+                        const blobReader = new FileReader();
+                        blobReader.onloadend = () => {
+                            tempCtx.close();
+                            resolve(blobReader.result);
+                        };
+                        blobReader.readAsDataURL(blob);
+                    } catch (err) {
+                        const rawReader = new FileReader();
+                        rawReader.onloadend = () => resolve(rawReader.result);
+                        rawReader.readAsDataURL(file);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function createWavBuffer(samples, sampleRate) {
+            const buffer = new ArrayBuffer(44 + samples.length * 2);
+            const view = new DataView(buffer);
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + samples.length * 2, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, samples.length * 2, true);
+            let index = 44;
+            for (let i = 0; i < samples.length; i++) {
+                let s = Math.max(-1, Math.min(1, samples[i]));
+                view.setInt16(index, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                index += 2;
+            }
+            return buffer;
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        document.getElementById('sched-audio-file').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            const statusEl = document.getElementById('sched-audio-status');
+            if (!file) return;
+            statusEl.innerHTML = `<span class="text-indigo-600 font-bold"><i class="fa-solid fa-spinner animate-spin"></i> 自動壓縮音檔中...</span>`;
+            try {
+                schedAudioBase64 = await compressAudioFile(file);
+                statusEl.innerHTML = `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> 音檔就緒可寫入雲端</span>`;
+            } catch (err) {
+                statusEl.innerText = "處理失敗";
+            }
+        });
+
+        async function addSchedule() {
+            const name = document.getElementById('sched-name').value.trim();
+            const time = document.getElementById('sched-time').value;
+            const type = document.getElementById('sched-type').value;
+            const text = document.getElementById('sched-text').value.trim();
+            const dayCheckboxes = document.querySelectorAll('.sched-day:checked');
+            const days = Array.from(dayCheckboxes).map(cb => parseInt(cb.value));
+
+            if (!name || !time || days.length === 0) return showToast("請填寫完整的名稱與時間", "warning");
+
+            let finalAudioData = null;
+            if (type === 'audio') {
+                const mode = document.querySelector('input[name="audio-mode"]:checked').value;
+                if (mode === 'file') {
+                    if (!schedAudioBase64) return showToast("請先選取音檔！", "warning");
+                    finalAudioData = schedAudioBase64;
+                } else {
+                    const audioUrl = document.getElementById('sched-audio-url').value.trim();
+                    if (!audioUrl) return showToast("請輸入音檔網址！", "warning");
+                    finalAudioData = audioUrl;
+                }
+            }
+
+            if (window.appState.editingSchedId) {
+                const targetIndex = window.appState.schedules.findIndex(s => s.id === window.appState.editingSchedId);
+                if (targetIndex > -1) {
+                    window.appState.schedules[targetIndex] = {
+                        ...window.appState.schedules[targetIndex],
+                        name, time, type, text, audioData: finalAudioData, days
+                    };
+                    await saveConfig();
+                    showToast(`定時排程「${name}」已更新！`, "success");
+                    cancelSchedEdit();
+                    renderScheduleList();
+                    return;
+                }
+            }
+
+            window.appState.schedules.push({
+                id: 'sched-' + Date.now(), name, time, type, text, audioData: finalAudioData, days, enabled: true, lastFired: ''
+            });
+            await saveConfig();
+            cancelSchedEdit();
+            showToast(`定時排程「${name}」新增成功！`, "success");
+            renderScheduleList();
+        }
+
+        function editSchedule(index) {
+            const sched = window.appState.schedules[index];
+            if (!sched) return;
+            window.appState.editingSchedId = sched.id;
+            document.getElementById('sched-name').value = sched.name || '';
+            document.getElementById('sched-time').value = sched.time || '17:00';
+            document.getElementById('sched-type').value = sched.type || 'tts';
+            toggleSchedTypeInputs();
+
+            if (sched.type === 'tts') {
+                document.getElementById('sched-text').value = sched.text || '';
+            } else {
+                const isUrl = sched.audioData && (sched.audioData.startsWith('http://') || sched.audioData.startsWith('https://'));
+                const radio = document.querySelector(`input[name="audio-mode"][value="${isUrl ? 'url' : 'file'}"]`);
+                if (radio) { radio.checked = true; toggleAudioModeInput(); }
+                if (isUrl) document.getElementById('sched-audio-url').value = sched.audioData || '';
+                else schedAudioBase64 = sched.audioData;
+            }
+
+            document.querySelectorAll('.sched-day').forEach(cb => {
+                cb.checked = sched.days.includes(parseInt(cb.value));
+            });
+
+            document.getElementById('text-sched-btn').innerText = '💾 更新排程設定';
+            document.getElementById('btn-cancel-sched-edit').classList.remove('hidden');
+        }
+
+        function cancelSchedEdit() {
+            window.appState.editingSchedId = null;
+            document.getElementById('sched-name').value = '';
+            document.getElementById('sched-text').value = '';
+            document.getElementById('sched-audio-file').value = '';
+            document.getElementById('sched-audio-url').value = '';
+            schedAudioBase64 = null;
+            document.getElementById('text-sched-btn').innerText = '儲存並啟用排程';
+            document.getElementById('btn-cancel-sched-edit').classList.add('hidden');
+        }
+
+        async function deleteSchedule(index) {
+            window.appState.schedules.splice(index, 1);
+            await saveConfig();
+            renderScheduleList();
+        }
+
+        async function toggleScheduleEnabled(index) {
+            window.appState.schedules[index].enabled = !window.appState.schedules[index].enabled;
+            await saveConfig();
+            renderScheduleList();
+        }
+
+        function testSchedulePlay(index) {
+            const sched = window.appState.schedules[index];
+            if (sched.type === 'audio' && sched.audioData) playDataUrlAudio(sched.audioData, sched.name);
+            else speakText(sched.text);
+        }
+
+        function renderScheduleList() {
+            const list = document.getElementById('settings-schedule-list');
+            if (!list) return;
+            const schedules = window.appState.schedules || [];
+            if (schedules.length === 0) {
+                list.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs">目前尚未設定任何定時自動廣播排程</div>`;
+                return;
+            }
+            const dayMap = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 0: '日' };
+            list.innerHTML = '';
+            schedules.forEach((item, index) => {
+                const daysText = item.days.map(d => dayMap[d]).join('、');
+                const li = document.createElement('li');
+                li.className = `p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs transition ${item.enabled ? 'bg-white' : 'bg-slate-50 opacity-60'}`;
+                li.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono font-bold text-sm bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-lg">${item.time}</span>
+                            <span class="font-bold text-slate-800">${item.name}</span>
+                        </div>
+                        <p class="text-slate-500 text-[11px]">重複: 週${daysText} ｜ 內容: ${item.type === 'tts' ? item.text : '定時音樂'}</p>
+                    </div>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="testSchedulePlay(${index})" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-1.5 rounded-lg font-semibold"><i class="fa-solid fa-play text-[10px]"></i> 試聽</button>
+                        <button onclick="editSchedule(${index})" class="bg-amber-50 hover:bg-amber-100 text-amber-700 px-2.5 py-1.5 rounded-lg font-semibold"><i class="fa-solid fa-pen-to-square text-[10px]"></i> 編輯</button>
+                        <button onclick="toggleScheduleEnabled(${index})" class="px-2.5 py-1.5 rounded-lg font-semibold ${item.enabled ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}">${item.enabled ? '已啟用' : '已停用'}</button>
+                        <button onclick="deleteSchedule(${index})" class="text-slate-400 hover:text-red-500 p-1.5"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function startScheduleChecker() {
+            setInterval(() => {
+                if (!window.appState.isSpeakerActive) return;
+                const now = new Date();
+                const currentDay = now.getDay();
+                const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                const todayDateStr = `${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}`;
+
+                (window.appState.schedules || []).forEach((item) => {
+                    if (!item.enabled || !item.days.includes(currentDay)) return;
+                    if (item.time === timeStr) {
+                        const fireKey = `${todayDateStr}_${timeStr}`;
+                        if (item.lastFired !== fireKey) {
+                            item.lastFired = fireKey;
+                            if (item.type === 'audio' && item.audioData) playDataUrlAudio(item.audioData, item.name);
+                            else if (item.text) speakText(item.text);
+                        }
+                    }
+                });
+            }, 5000);
+        }
+
         function renderSettingsPanel() {
             renderSettingList('settings-staff-list', window.appState.staff, deleteStaff);
             renderSettingList('settings-location-list', window.appState.locations, deleteLocation);
             renderTemplateSettingList();
+            renderScheduleList();
         }
 
         function renderSettingList(elementId, dataset, deleteCallback) {
@@ -1562,12 +1785,7 @@
             dataset.forEach((item, index) => {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center px-4 py-3 text-sm hover:bg-slate-50 transition";
-                li.innerHTML = `
-                    <span class="font-medium text-slate-700">${item}</span>
-                    <button onclick="${deleteCallback.name}(${index})" class="text-slate-400 hover:text-red-500 p-1.5 transition">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                `;
+                li.innerHTML = `<span class="font-medium text-slate-700">${item}</span><button onclick="${deleteCallback.name}(${index})" class="text-slate-400 hover:text-red-500 p-1.5"><i class="fa-regular fa-trash-can"></i></button>`;
                 list.appendChild(li);
             });
         }
@@ -1579,27 +1797,23 @@
             window.appState.templates.forEach((item, index) => {
                 const li = document.createElement('li');
                 li.className = "flex justify-between items-center px-4 py-3 text-xs hover:bg-slate-50 transition gap-4";
-                li.innerHTML = `
-                    <span class="font-medium text-slate-600 break-all">${item}</span>
-                    <button onclick="deleteTemplate(${index})" class="text-slate-400 hover:text-red-500 p-1.5 shrink-0 transition">
-                        <i class="fa-regular fa-trash-can"></i>
-                    </button>
-                `;
+                li.innerHTML = `<span class="font-medium text-slate-600 break-all">${item}</span><button onclick="deleteTemplate(${index})" class="text-slate-400 hover:text-red-500 p-1.5 shrink-0"><i class="fa-regular fa-trash-can"></i></button>`;
                 list.appendChild(li);
             });
         }
 
         async function saveConfig() {
             const db = window.appState.db;
-            const { appId, staff, locations, templates } = window.appState;
+            const { appId, staff, locations, templates, schedules } = window.appState;
             if (db && window.dbOps) {
                 try {
-                    await window.dbOps.saveSettings(appId, { staff, locations, templates });
+                    await window.dbOps.saveSettings(appId, { staff, locations, templates, schedules });
                 } catch (e) {}
             } else {
                 localStorage.setItem('mock_staff', JSON.stringify(staff));
                 localStorage.setItem('mock_locations', JSON.stringify(locations));
                 localStorage.setItem('mock_templates', JSON.stringify(templates));
+                localStorage.setItem('mock_schedules', JSON.stringify(schedules));
                 renderUIPanels();
             }
         }
@@ -1607,8 +1821,7 @@
         function addNewStaff() {
             const input = document.getElementById('new-staff-name');
             const name = input.value.trim();
-            if (!name) return;
-            if (window.appState.staff.includes(name)) return;
+            if (!name || window.appState.staff.includes(name)) return;
             window.appState.staff.push(name);
             input.value = '';
             saveConfig();
@@ -1622,8 +1835,7 @@
         function addNewLocation() {
             const input = document.getElementById('new-location-name');
             const loc = input.value.trim();
-            if (!loc) return;
-            if (window.appState.locations.includes(loc)) return;
+            if (!loc || window.appState.locations.includes(loc)) return;
             window.appState.locations.push(loc);
             input.value = '';
             saveConfig();
@@ -1637,7 +1849,7 @@
         function addNewTemplate() {
             const input = document.getElementById('new-template-text');
             const tpl = input.value.trim();
-            if (!tpl || !tpl.includes('[姓名]') || !tpl.includes('[地點]')) return;
+            if (!tpl || !tpl.includes('[姓名]')) return;
             window.appState.templates.push(tpl);
             input.value = '';
             saveConfig();
@@ -1652,33 +1864,52 @@
             const db = window.appState.db;
             if (db && window.dbOps) {
                 try {
-                    showToast("正在清空雲端發送歷史紀錄...", "info");
-                    const { appId } = window.appState;
-                    await window.dbOps.clearBroadcasts(appId);
-                    showToast("已成功清空所有人的雲端歷史紀錄！", "success");
+                    showToast("正在清空發送歷史紀錄...", "info");
+                    await window.dbOps.clearBroadcasts(window.appState.appId);
+                    showToast("已成功清空發送歷史紀錄！", "success");
                 } catch (e) {
-                    showToast("清除紀錄失敗", "error");
+                    showToast("清除歷史紀錄失敗", "error");
                 }
             } else {
                 localStorage.removeItem('mock_history');
                 renderHistory([]);
-                showToast("本地模擬發送紀錄已清除", "success");
+                showToast("發送歷史紀錄已清除", "success");
             }
         }
 
         function switchTab(tabName) {
             document.getElementById('panel-broadcaster').classList.add('hidden');
+            document.getElementById('panel-inspection').classList.add('hidden');
             document.getElementById('panel-speaker').classList.add('hidden');
             document.getElementById('panel-settings').classList.add('hidden');
+            
             document.getElementById(`panel-${tabName}`).classList.remove('hidden');
 
-            const tabs = ['broadcaster', 'speaker', 'settings'];
+            const tabs = ['broadcaster', 'inspection', 'speaker', 'settings'];
             tabs.forEach(t => {
                 const tabBtn = document.getElementById(`tab-${t}`);
-                tabBtn.className = t === tabName 
-                    ? "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm"
-                    : "flex items-center space-x-2 px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm";
+                if (tabBtn) {
+                    tabBtn.className = t === tabName 
+                        ? "flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-yellow-400 text-yellow-300 font-medium transition text-sm"
+                        : "flex items-center space-x-2 px-4 md:px-5 py-3.5 border-b-2 border-transparent text-indigo-100 hover:text-white transition text-sm";
+                }
             });
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let icon = type === "success" ? "fa-circle-check text-emerald-500" : (type === "warning" ? "fa-triangle-exclamation text-amber-500" : "fa-circle-info text-blue-500");
+            let border = type === "success" ? "border-emerald-100" : (type === "warning" ? "border-amber-100" : "border-blue-100");
+
+            toast.className = `flex items-center space-x-3 bg-white border ${border} px-4 py-3.5 rounded-xl shadow-lg transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg shrink-0"></i><p class="text-sm font-semibold text-slate-700">${message}</p>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-10px]');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
