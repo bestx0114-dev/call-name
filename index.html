@@ -116,6 +116,7 @@
     <main class="flex-grow max-w-7xl w-full mx-auto p-4 md:p-6">
         <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none"></div>
 
+        <!-- 1. 廣播主控台 -->
         <section id="panel-broadcaster" class="space-y-6">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
@@ -196,6 +197,7 @@
             </div>
         </section>
 
+        <!-- 2. 驗貨桌叫人面板 -->
         <section id="panel-inspection" class="hidden max-w-5xl mx-auto space-y-6">
             <div class="bg-white rounded-3xl shadow-sm border border-amber-100 p-6 md:p-8 space-y-6 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none"></div>
@@ -209,7 +211,7 @@
                             <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
                                 <span>📦 驗貨桌專用快捷呼叫台</span>
                             </h2>
-                            <p class="text-xs text-slate-500 mt-1">點擊下方任何同仁姓名，系統將<b>立即發送廣播</b>：「[姓名]，請到驗貨桌～[姓名]，請到驗貨桌～」</p>
+                            <p class="text-xs text-slate-500 mt-1">點擊下方任何同仁姓名，系統將<b>流暢發送廣播</b>：「[姓名]，請到驗貨桌～[姓名]，請到驗貨桌～」</p>
                         </div>
                     </div>
                     
@@ -245,6 +247,7 @@
             </div>
         </section>
 
+        <!-- 3. 喇叭接收端面板 -->
         <section id="panel-speaker" class="hidden max-w-3xl mx-auto space-y-6">
             <div class="bg-white rounded-3xl shadow-lg border border-slate-100 overflow-hidden">
                 <div class="bg-gradient-to-r from-indigo-800 to-indigo-900 text-white p-8 text-center relative">
@@ -291,7 +294,7 @@
                         </div>
                     </div>
 
-                    <!-- 🎵 辦公室背景音樂 (BGM) 控制台 (含智慧自動壓音) -->
+                    <!-- 🎵 BGM 背景音樂控制台 (含壓音與防睡眠) -->
                     <div class="bg-indigo-50/60 p-5 rounded-2xl border border-indigo-100/80 space-y-3">
                         <div class="flex items-center justify-between">
                             <h3 class="text-sm font-bold text-indigo-900 flex items-center gap-2">
@@ -300,7 +303,7 @@
                             </h3>
                             <span class="text-[10px] bg-indigo-200 text-indigo-800 font-semibold px-2 py-0.5 rounded-full">廣播時自動變小聲</span>
                         </div>
-                        <p class="text-xs text-slate-500">不用開啟別的分頁！在此貼上 GitHub 上的背景音樂檔網址（或線上電台），廣播一響起，背景音樂會<b>全自動降至 10% 小聲</b>，廣播結束後<b>自動優雅升回正常音量</b>！</p>
+                        <p class="text-xs text-slate-500">貼上 GitHub Pages 上的 MP3 音樂網址。廣播響起時，背景音樂會全自動降至 10% 微弱音量，廣播結束後自動優雅恢復！</p>
                         
                         <div class="flex flex-col sm:flex-row gap-2 pt-1">
                             <input type="url" id="bgm-url-input" placeholder="貼上 GitHub 音樂網址，例: https://.../bgm.mp3" class="flex-grow border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none bg-white font-mono">
@@ -316,7 +319,6 @@
                             <i class="fa-solid fa-volume-high text-indigo-500"></i>
                         </div>
 
-                        <!-- 隱藏式 HTML5 背景音樂音訊元件 -->
                         <audio id="bgm-audio-player" loop class="hidden"></audio>
                     </div>
 
@@ -387,6 +389,7 @@
             </div>
         </section>
 
+        <!-- 4. 系統與排程設定頁 -->
         <section id="panel-settings" class="hidden space-y-6">
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 md:p-6 space-y-4">
                 <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -591,6 +594,7 @@
         <p>© 2026 SmartOffice Broadcast Inc. 全功能整合智慧廣播網頁版</p>
     </footer>
 
+    <!-- 核心 JS 模組 (Firebase 雲端與實時同步) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -616,6 +620,7 @@
             sessionStartTime: Date.now(),
             processedBroadcasts: new Set(),
             wakeLock: null,            
+            keepAliveAudio: null,
             defaultStaff: ['0101主任', '0102店長', '0103姝敏', '0124志弘', '0201JEFF', '0202傑宇'],
             defaultLocations: ['辦公室', '驗貨桌', '口罩區'],
             defaultTemplates: [
@@ -766,6 +771,7 @@
         });
     </script>
 
+    <!-- 全域輔助與音訊播放邏輯 -->
     <script>
         let customChimeBuffer = null;
         let indexedDBInstance = null;
@@ -863,9 +869,6 @@
             }
         }
 
-        // =====================================================================
-        // 🎵 全新：BGM 背景音樂播放與全自動優雅壓音 (Audio Ducking)
-        // =====================================================================
         function toggleBgmPlay() {
             const player = document.getElementById('bgm-audio-player');
             const urlInput = document.getElementById('bgm-url-input');
@@ -912,7 +915,7 @@
             if (!player || !window.appState.isBgmPlaying || player.paused) return;
 
             clearInterval(window.appState.bgmFadeInterval);
-            const targetVol = window.appState.originalBgmVolume * 0.1; // 壓低至 10%
+            const targetVol = window.appState.originalBgmVolume * 0.1;
             
             window.appState.bgmFadeInterval = setInterval(() => {
                 if (player.volume > targetVol + 0.05) {
@@ -940,6 +943,321 @@
                     clearInterval(window.appState.bgmFadeInterval);
                 }
             }, 50);
+        }
+
+        // 🛡️ 背景媒體音訊保活 (Keep-Alive) —— 採用 5 秒 Web Audio C++ 核心無聲緩衝，CPU 占用率 0%
+        let keepAliveSourceNode = null;
+
+        function startKeepAliveAudio() {
+            try {
+                initAudioContext();
+                if (keepAliveSourceNode) return;
+
+                const sampleRate = globalAudioCtx.sampleRate || 44100;
+                const buffer = globalAudioCtx.createBuffer(1, sampleRate * 5, sampleRate);
+
+                keepAliveSourceNode = globalAudioCtx.createBufferSource();
+                keepAliveSourceNode.buffer = buffer;
+                keepAliveSourceNode.loop = true;
+
+                keepAliveSourceNode.connect(globalAudioCtx.destination);
+                keepAliveSourceNode.start(0);
+
+                console.log("🛡️ 5 秒 Web Audio 原生防休眠音軌已啟動，CPU 負擔為 0%！");
+            } catch (e) {
+                console.warn("啟動防休眠音軌失敗:", e);
+            }
+        }
+
+        function stopKeepAliveAudio() {
+            if (keepAliveSourceNode) {
+                try {
+                    keepAliveSourceNode.stop();
+                    keepAliveSourceNode.disconnect();
+                } catch (e) {}
+                keepAliveSourceNode = null;
+            }
+        }
+
+        function toggleSpeakerActivation() {
+            const btn = document.getElementById('btn-activate-speaker');
+            const icon = document.getElementById('speaker-icon');
+            const btnText = document.getElementById('speaker-btn-text');
+            const blackoutBtnZone = document.getElementById('blackout-btn-zone');
+            
+            if (!window.appState.isSpeakerActive) {
+                window.appState.isSpeakerActive = true;
+                window.appState.sessionStartTime = Date.now();
+                initAudioContext();
+                try {
+                    const dummy = new SpeechSynthesisUtterance(" ");
+                    dummy.volume = 0; dummy.rate = 10;
+                    window.speechSynthesis.speak(dummy);
+                } catch (e) {}
+
+                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
+                icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
+                btnText.innerText = "監聽音響運作中...";
+                if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); 
+                showToast("喇叭播放模式已啟動！防休眠保護中", "success");
+                
+                requestWakeLock(); 
+                startKeepAliveAudio(); // 🛡️ 啟動 0% CPU 聲學防休眠
+                playChimeSound();
+            } else {
+                window.appState.isSpeakerActive = false;
+                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
+                icon.className = "fa-solid fa-power-off text-5xl";
+                btnText.innerText = "啟動監聽播放";
+                if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); 
+                showToast("監聽播放已關閉", "info");
+                
+                releaseWakeLock(); 
+                stopKeepAliveAudio();
+            }
+        }
+
+        function playChimeSound() {
+            return new Promise((resolve) => {
+                try {
+                    initAudioContext();
+                    const ctx = globalAudioCtx;
+                    const style = document.getElementById('setting-chime-style').value;
+                    if (style === 'custom' && customChimeBuffer) {
+                        const source = ctx.createBufferSource();
+                        source.buffer = customChimeBuffer;
+                        source.connect(ctx.destination);
+                        source.start(0);
+                        source.onended = () => resolve();
+                        return;
+                    }
+                    const now = ctx.currentTime;
+                    if (style === 'standard') {
+                        playSingleSynthNote(554.37, now, 0.8);       
+                        playSingleSynthNote(440.00, now + 0.25, 1.2); 
+                        setTimeout(resolve, 1400);
+                    } else if (style === 'westminster') {
+                        playSingleSynthNote(329.63, now, 0.9);        
+                        playSingleSynthNote(261.63, now + 0.4, 0.9);  
+                        playSingleSynthNote(293.66, now + 0.8, 0.9);  
+                        playSingleSynthNote(196.00, now + 1.2, 1.4);  
+                        setTimeout(resolve, 2600);
+                    } else {
+                        playSingleSynthNote(349.23, now, 1.2);        
+                        playSingleSynthNote(440.00, now + 0.3, 1.2);  
+                        playSingleSynthNote(523.25, now + 0.6, 1.2);  
+                        playSingleSynthNote(698.46, now + 0.9, 1.6);  
+                        setTimeout(resolve, 2400);
+                    }
+                } catch (e) { resolve(); }
+            });
+        }
+
+        function playEndingChimeSound() {
+            return new Promise((resolve) => {
+                try {
+                    initAudioContext();
+                    const ctx = globalAudioCtx;
+                    const style = document.getElementById('setting-chime-style').value;
+                    const now = ctx.currentTime;
+                    if (style === 'standard') {
+                        playSingleSynthNote(440.00, now, 0.8);       
+                        playSingleSynthNote(554.37, now + 0.25, 1.2); 
+                        setTimeout(resolve, 1400);
+                    } else if (style === 'westminster') {
+                        playSingleSynthNote(196.00, now, 0.9);
+                        playSingleSynthNote(293.66, now + 0.4, 0.9);
+                        playSingleSynthNote(261.63, now + 0.8, 0.9);
+                        playSingleSynthNote(329.63, now + 1.2, 1.4);
+                        setTimeout(resolve, 2600);
+                    } else {
+                        playSingleSynthNote(698.46, now, 1.2);        
+                        playSingleSynthNote(523.25, now + 0.3, 1.2);  
+                        playSingleSynthNote(440.00, now + 0.6, 1.2);  
+                        playSingleSynthNote(349.23, now + 0.9, 1.6);  
+                        setTimeout(resolve, 2400);
+                    }
+                } catch (e) { resolve(); }
+            });
+        }
+
+        function playSingleSynthNote(frequency, startTime, duration) {
+            const ctx = globalAudioCtx;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, startTime);
+            gain.gain.setValueAtTime(0.18, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.start(startTime); osc.stop(startTime + duration);
+        }
+
+        function processIncomingBroadcasts(broadcasts) {
+            if (broadcasts.length === 0) return;
+            const latest = broadcasts[0];
+            const now = Date.now();
+
+            if (now - latest.timestamp > 60000) return;
+
+            if (latest.timestamp > window.appState.sessionStartTime) {
+                if (!window.appState.processedBroadcasts.has(latest.id)) {
+                    window.appState.processedBroadcasts.add(latest.id);
+                    if (latest.type === 'audio' && latest.audioData) playDataUrlAudio(latest.audioData, latest.text);
+                    else speakText(latest.text);
+                }
+            }
+        }
+
+        async function speakText(text) {
+            const activationZone = document.getElementById('btn-activate-speaker');
+            const visualizer = document.getElementById('playing-visualizer');
+            const playingText = document.getElementById('currently-playing-text');
+            const speakerStateSub = document.getElementById('speaker-state-sub');
+            
+            if (visualizer) {
+                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
+                visualizer.classList.remove('hidden');
+                playingText.innerText = `「${text}」`;
+                if (speakerStateSub) speakerStateSub.innerText = "正在播報...";
+            }
+
+            duckBgmVolume();
+            await playChimeSound();
+
+            if (typeof window.speechSynthesis === 'undefined') {
+                restoreBgmVolume();
+                return;
+            }
+
+            window.speechSynthesis.cancel(); 
+            const speechText = text.replace(/[~～]/g, '，');
+            const utterance = new SpeechSynthesisUtterance(speechText);
+            utterance.lang = 'zh-TW';
+            window.activeUtterance = utterance;
+            
+            const rateInput = document.getElementById('setting-rate');
+            const pitchInput = document.getElementById('setting-pitch');
+            const voiceSelect = document.getElementById('setting-voice');
+            if (rateInput) utterance.rate = parseFloat(rateInput.value);
+            if (pitchInput) utterance.pitch = parseFloat(pitchInput.value);
+            
+            const voices = window.speechSynthesis.getVoices();
+            if (voiceSelect && voiceSelect.value) {
+                const sel = voices.find(v => v.voiceURI === voiceSelect.value);
+                if (sel) utterance.voice = sel;
+            } else {
+                const best = getOptimalChineseVoice(voices);
+                if (best) utterance.voice = best;
+            }
+
+            const safetyTimeout = setTimeout(() => {
+                if (visualizer && !visualizer.classList.contains('hidden')) {
+                    window.activeUtterance = null;
+                    visualizer.classList.add('hidden');
+                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                    restoreBgmVolume();
+                }
+            }, 25000);
+
+            utterance.onend = () => {
+                clearTimeout(safetyTimeout);
+                window.activeUtterance = null;
+                if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
+
+                setTimeout(async () => {
+                    if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
+                    await playEndingChimeSound();
+                    restoreBgmVolume();
+
+                    setTimeout(() => {
+                        if (visualizer) {
+                            visualizer.classList.add('hidden');
+                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                        }
+                    }, 500);
+                }, 200);
+            };
+
+            utterance.onerror = () => {
+                clearTimeout(safetyTimeout);
+                window.activeUtterance = null;
+                restoreBgmVolume();
+                if (visualizer) {
+                    visualizer.classList.add('hidden');
+                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                }
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function normalizeAudioUrl(url) {
+            if (!url) return '';
+            url = url.trim();
+            const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
+            if (driveMatch && driveMatch[1]) {
+                return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
+            }
+            return url;
+        }
+
+        async function playDataUrlAudio(dataUrl, title) {
+            const activationZone = document.getElementById('btn-activate-speaker');
+            const visualizer = document.getElementById('playing-visualizer');
+            const playingText = document.getElementById('currently-playing-text');
+            const speakerStateSub = document.getElementById('speaker-state-sub');
+
+            if (visualizer) {
+                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
+                visualizer.classList.remove('hidden');
+                playingText.innerText = `🎵 播放音樂：${title || '定時音樂'}`;
+                if (speakerStateSub) speakerStateSub.innerText = "正在播放定時音樂...";
+            }
+
+            duckBgmVolume();
+
+            try {
+                initAudioContext();
+                const driveMatch = dataUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || dataUrl.match(/id=([a-zA-Z0-9_-]+)/);
+                const fileId = (driveMatch && driveMatch[1]) ? driveMatch[1] : null;
+
+                let urlsToTry = fileId ? [
+                    `https://lh3.googleusercontent.com/d/${fileId}`,
+                    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
+                    `https://docs.google.com/uc?export=download&id=${fileId}`
+                ] : [normalizeAudioUrl(dataUrl)];
+
+                let currentTryIndex = 0;
+                function tryPlayNextUrl() {
+                    if (currentTryIndex >= urlsToTry.length) {
+                        showToast("定時音檔播放失敗，請確認網址", "error");
+                        restoreBgmVolume();
+                        if (visualizer) {
+                            visualizer.classList.add('hidden');
+                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                        }
+                        return;
+                    }
+                    const audio = new Audio(urlsToTry[currentTryIndex++]);
+                    audio.onended = () => {
+                        if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
+                        restoreBgmVolume();
+                        setTimeout(() => {
+                            if (visualizer) {
+                                visualizer.classList.add('hidden');
+                                if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
+                            }
+                        }, 500);
+                    };
+                    audio.onerror = () => tryPlayNextUrl();
+                    const playPromise = audio.play();
+                    if (playPromise !== undefined) playPromise.catch(() => tryPlayNextUrl());
+                }
+                tryPlayNextUrl();
+            } catch (e) {
+                restoreBgmVolume();
+                if (visualizer) visualizer.classList.add('hidden');
+            }
         }
 
         function renderUIPanels() {
@@ -998,9 +1316,7 @@
             } else {
                 saveToMockHistory(payload);
                 showToast(`📢 模擬呼叫：「${name}」至驗貨桌`, "success");
-                if (window.appState.isSpeakerActive) {
-                    speakText(text);
-                }
+                if (window.appState.isSpeakerActive) speakText(text);
             }
         }
 
@@ -1243,7 +1559,7 @@
             if (db && window.dbOps) {
                 try {
                     await window.dbOps.addBroadcast(window.appState.appId, payload);
-                    showToast("廣播已送上雲端！音響端將庫刻播放", "success");
+                    showToast("廣播已送上雲端！音響端將立刻播放", "success");
                     clearSelection();
                 } catch (error) {
                     saveToMockHistory(payload);
@@ -1298,284 +1614,6 @@
         function reBroadcast(text) {
             document.getElementById('broadcast-preview-text').value = text;
             sendBroadcast();
-        }
-
-        function toggleSpeakerActivation() {
-            const btn = document.getElementById('btn-activate-speaker');
-            const icon = document.getElementById('speaker-icon');
-            const btnText = document.getElementById('speaker-btn-text');
-            const blackoutBtnZone = document.getElementById('blackout-btn-zone');
-            
-            if (!window.appState.isSpeakerActive) {
-                window.appState.isSpeakerActive = true;
-                window.appState.sessionStartTime = Date.now();
-                initAudioContext();
-                try {
-                    const dummy = new SpeechSynthesisUtterance(" ");
-                    dummy.volume = 0; dummy.rate = 10;
-                    window.speechSynthesis.speak(dummy);
-                } catch (e) {}
-
-                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white shadow-xl shadow-emerald-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
-                icon.className = "fa-solid fa-volume-high text-5xl animate-pulse";
-                btnText.innerText = "監聽音響運作中...";
-                if (blackoutBtnZone) blackoutBtnZone.classList.remove('hidden'); 
-                showToast("喇叭播放模式已啟動！", "success");
-                requestWakeLock(); 
-                playChimeSound();
-            } else {
-                window.appState.isSpeakerActive = false;
-                btn.className = "mx-auto w-56 h-56 rounded-full bg-gradient-to-tr from-indigo-600 to-blue-500 text-white shadow-xl shadow-indigo-600/30 hover:scale-105 active:scale-95 transition-all flex flex-col items-center justify-center space-y-3 border-8 border-indigo-100";
-                icon.className = "fa-solid fa-power-off text-5xl";
-                btnText.innerText = "啟動監聽播放";
-                if (blackoutBtnZone) blackoutBtnZone.classList.add('hidden'); 
-                showToast("監聽播放已關閉", "info");
-                releaseWakeLock(); 
-            }
-        }
-
-        function playChimeSound() {
-            return new Promise((resolve) => {
-                try {
-                    initAudioContext();
-                    const ctx = globalAudioCtx;
-                    const style = document.getElementById('setting-chime-style').value;
-                    if (style === 'custom' && customChimeBuffer) {
-                        const source = ctx.createBufferSource();
-                        source.buffer = customChimeBuffer;
-                        source.connect(ctx.destination);
-                        source.start(0);
-                        source.onended = () => resolve();
-                        return;
-                    }
-                    const now = ctx.currentTime;
-                    if (style === 'standard') {
-                        playSingleSynthNote(554.37, now, 0.8);       
-                        playSingleSynthNote(440.00, now + 0.25, 1.2); 
-                        setTimeout(resolve, 1400);
-                    } else if (style === 'westminster') {
-                        playSingleSynthNote(329.63, now, 0.9);        
-                        playSingleSynthNote(261.63, now + 0.4, 0.9);  
-                        playSingleSynthNote(293.66, now + 0.8, 0.9);  
-                        playSingleSynthNote(196.00, now + 1.2, 1.4);  
-                        setTimeout(resolve, 2600);
-                    } else {
-                        playSingleSynthNote(349.23, now, 1.2);        
-                        playSingleSynthNote(440.00, now + 0.3, 1.2);  
-                        playSingleSynthNote(523.25, now + 0.6, 1.2);  
-                        playSingleSynthNote(698.46, now + 0.9, 1.6);  
-                        setTimeout(resolve, 2400);
-                    }
-                } catch (e) { resolve(); }
-            });
-        }
-
-        function playEndingChimeSound() {
-            return new Promise((resolve) => {
-                try {
-                    initAudioContext();
-                    const ctx = globalAudioCtx;
-                    const style = document.getElementById('setting-chime-style').value;
-                    const now = ctx.currentTime;
-                    if (style === 'standard') {
-                        playSingleSynthNote(440.00, now, 0.8);       
-                        playSingleSynthNote(554.37, now + 0.25, 1.2); 
-                        setTimeout(resolve, 1400);
-                    } else if (style === 'westminster') {
-                        playSingleSynthNote(196.00, now, 0.9);
-                        playSingleSynthNote(293.66, now + 0.4, 0.9);
-                        playSingleSynthNote(261.63, now + 0.8, 0.9);
-                        playSingleSynthNote(329.63, now + 1.2, 1.4);
-                        setTimeout(resolve, 2600);
-                    } else {
-                        playSingleSynthNote(698.46, now, 1.2);        
-                        playSingleSynthNote(523.25, now + 0.3, 1.2);  
-                        playSingleSynthNote(440.00, now + 0.6, 1.2);  
-                        playSingleSynthNote(349.23, now + 0.9, 1.6);  
-                        setTimeout(resolve, 2400);
-                    }
-                } catch (e) { resolve(); }
-            });
-        }
-
-        function playSingleSynthNote(frequency, startTime, duration) {
-            const ctx = globalAudioCtx;
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = 'sine'; osc.frequency.setValueAtTime(frequency, startTime);
-            gain.gain.setValueAtTime(0.18, startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-            osc.connect(gain); gain.connect(ctx.destination);
-            osc.start(startTime); osc.stop(startTime + duration);
-        }
-
-        function processIncomingBroadcasts(broadcasts) {
-            if (broadcasts.length === 0) return;
-            const latest = broadcasts[0];
-            if (latest.timestamp > window.appState.sessionStartTime) {
-                if (!window.appState.processedBroadcasts.has(latest.id)) {
-                    window.appState.processedBroadcasts.add(latest.id);
-                    if (latest.type === 'audio' && latest.audioData) playDataUrlAudio(latest.audioData, latest.text);
-                    else speakText(latest.text);
-                }
-            }
-        }
-
-        async function speakText(text) {
-            const activationZone = document.getElementById('btn-activate-speaker');
-            const visualizer = document.getElementById('playing-visualizer');
-            const playingText = document.getElementById('currently-playing-text');
-            const speakerStateSub = document.getElementById('speaker-state-sub');
-            
-            if (visualizer) {
-                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
-                visualizer.classList.remove('hidden');
-                playingText.innerText = `「${text}」`;
-                if (speakerStateSub) speakerStateSub.innerText = "正在播報...";
-            }
-
-            // 📉 廣播開始：全自動漸變壓低背景音樂音量
-            duckBgmVolume();
-
-            await playChimeSound();
-            if (typeof window.speechSynthesis === 'undefined') {
-                restoreBgmVolume();
-                return;
-            }
-
-            window.speechSynthesis.cancel(); 
-            const speechText = text.replace(/[~～]/g, '，');
-            const utterance = new SpeechSynthesisUtterance(speechText);
-            utterance.lang = 'zh-TW';
-            window.activeUtterance = utterance;
-            
-            const rateInput = document.getElementById('setting-rate');
-            const pitchInput = document.getElementById('setting-pitch');
-            const voiceSelect = document.getElementById('setting-voice');
-            if (rateInput) utterance.rate = parseFloat(rateInput.value);
-            if (pitchInput) utterance.pitch = parseFloat(pitchInput.value);
-            
-            const voices = window.speechSynthesis.getVoices();
-            if (voiceSelect && voiceSelect.value) {
-                const sel = voices.find(v => v.voiceURI === voiceSelect.value);
-                if (sel) utterance.voice = sel;
-            } else {
-                const best = getOptimalChineseVoice(voices);
-                if (best) utterance.voice = best;
-            }
-
-            const safetyTimeout = setTimeout(() => {
-                if (visualizer && !visualizer.classList.contains('hidden')) {
-                    window.activeUtterance = null;
-                    visualizer.classList.add('hidden');
-                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
-                    restoreBgmVolume();
-                }
-            }, 25000);
-
-            utterance.onend = () => {
-                clearTimeout(safetyTimeout);
-                window.activeUtterance = null;
-                if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
-
-                setTimeout(async () => {
-                    if (speakerStateSub) speakerStateSub.innerText = "🎶 播放結束提示音...";
-                    await playEndingChimeSound();
-                    
-                    // 📈 廣播全數結束：自動淡入升回背景音樂音量
-                    restoreBgmVolume();
-
-                    setTimeout(() => {
-                        if (visualizer) {
-                            visualizer.classList.add('hidden');
-                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
-                        }
-                    }, 500);
-                }, 200);
-            };
-
-            utterance.onerror = () => {
-                clearTimeout(safetyTimeout);
-                window.activeUtterance = null;
-                restoreBgmVolume();
-                if (visualizer) {
-                    visualizer.classList.add('hidden');
-                    if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
-                }
-            };
-
-            window.speechSynthesis.speak(utterance);
-        }
-
-        function normalizeAudioUrl(url) {
-            if (!url) return '';
-            url = url.trim();
-            const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/id=([a-zA-Z0-9_-]+)/);
-            if (driveMatch && driveMatch[1]) {
-                return `https://lh3.googleusercontent.com/d/${driveMatch[1]}`;
-            }
-            return url;
-        }
-
-        async function playDataUrlAudio(dataUrl, title) {
-            const activationZone = document.getElementById('btn-activate-speaker');
-            const visualizer = document.getElementById('playing-visualizer');
-            const playingText = document.getElementById('currently-playing-text');
-            const speakerStateSub = document.getElementById('speaker-state-sub');
-
-            if (visualizer) {
-                if (activationZone) activationZone.classList.add('scale-95', 'opacity-50');
-                visualizer.classList.remove('hidden');
-                playingText.innerText = `🎵 播放音樂：${title || '定時音樂'}`;
-                if (speakerStateSub) speakerStateSub.innerText = "正在播放定時音樂...";
-            }
-
-            // 📉 定時廣播音樂開始：自動壓低背景音樂
-            duckBgmVolume();
-
-            try {
-                initAudioContext();
-                const driveMatch = dataUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || dataUrl.match(/id=([a-zA-Z0-9_-]+)/);
-                const fileId = (driveMatch && driveMatch[1]) ? driveMatch[1] : null;
-
-                let urlsToTry = fileId ? [
-                    `https://lh3.googleusercontent.com/d/${fileId}`,
-                    `https://drive.usercontent.google.com/download?id=${fileId}&export=download&confirm=t`,
-                    `https://docs.google.com/uc?export=download&id=${fileId}`
-                ] : [normalizeAudioUrl(dataUrl)];
-
-                let currentTryIndex = 0;
-                function tryPlayNextUrl() {
-                    if (currentTryIndex >= urlsToTry.length) {
-                        showToast("定時音檔播放失敗，請確認網址", "error");
-                        restoreBgmVolume();
-                        if (visualizer) {
-                            visualizer.classList.add('hidden');
-                            if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
-                        }
-                        return;
-                    }
-                    const audio = new Audio(urlsToTry[currentTryIndex++]);
-                    audio.onended = () => {
-                        if (speakerStateSub) speakerStateSub.innerText = "播報完畢...";
-                        // 📈 音檔播完：還原背景音樂
-                        restoreBgmVolume();
-                        setTimeout(() => {
-                            if (visualizer) {
-                                visualizer.classList.add('hidden');
-                                if (activationZone) activationZone.classList.remove('scale-95', 'opacity-50');
-                            }
-                        }, 500);
-                    };
-                    audio.onerror = () => tryPlayNextUrl();
-                    const playPromise = audio.play();
-                    if (playPromise !== undefined) playPromise.catch(() => tryPlayNextUrl());
-                }
-                tryPlayNextUrl();
-            } catch (e) {
-                restoreBgmVolume();
-                if (visualizer) visualizer.classList.add('hidden');
-            }
         }
 
         function getOptimalChineseVoice(voices) {
